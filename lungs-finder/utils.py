@@ -42,7 +42,6 @@ class Utils:
     def preprocess_img(image):
         # image = Utils.normalize(image)
         # image = Utils.proportional_resize(image, 512)
-        image = Utils.reverted_proportional_resize(image, 1024)
         return image
 
     @staticmethod
