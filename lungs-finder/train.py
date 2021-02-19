@@ -5,17 +5,27 @@ from data_generator import DataGenerator
 from model import Model
 from utils import Utils
 
+def custom_loss(y_true , y_pred):
+    # y_true,
+    # y_pred x, y, w, h
+    # loss = keras.losses.MSE
+
+    print("\n\n y_true", y_true)
+
+    print("\ny_pred", y_pred)
+
+
 
 def train():
     #DATASET
-    BASE_PATH = r"C:\Users\m\Desktop\LUNGS\lungs-finder"
-    EPOCHS = 200
+    BASE_PATH = r"C:\Users\m\Desktop\datasets"
+    EPOCHS = 10
 
-    train_path = os.path.join(BASE_PATH, r"dataset\train")
-    validation_path = os.path.join(BASE_PATH, r"dataset\validation")
+    train_path = os.path.join(BASE_PATH, r"dicom_train")
+    # validation_path = os.path.join(BASE_PATH, r"dataset\validation")
 
     training_generator = DataGenerator(train_path)
-    validation_generator = DataGenerator(validation_path)
+    # validation_generator = DataGenerator(validation_path)
 
     #MODEL
     model = Model.model()
@@ -32,7 +42,7 @@ def train():
 
     #COMPILE
     optimizer = keras.optimizers.RMSprop()
-    loss = keras.losses.MSE
+    loss = keras.losses.MSE # custom_loss
 
     model.compile(
         optimizer=optimizer,
@@ -47,7 +57,7 @@ def train():
 
     #TRAIN
     model.fit_generator(generator=training_generator,
-                        validation_data=validation_generator,
+                        # validation_data=validation_generator,
                         epochs=EPOCHS,
                         use_multiprocessing=True)
 
