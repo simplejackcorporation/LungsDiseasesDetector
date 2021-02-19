@@ -2,6 +2,7 @@ import os
 import keras
 
 from data_generator import DataGenerator
+from model import Model
 from utils import Utils
 
 
@@ -17,26 +18,17 @@ def train():
     validation_generator = DataGenerator(validation_path)
 
     #MODEL
-    base_model = keras.applications.MobileNet(
-        # input_shape=(224, 224, 3),
-        # alpha=1.0,
-        include_top=False,
-        weights="imagenet",
-        # input_tensor=None,
-        # pooling=None,
-        # classes=1000,
-        # classifier_activation="softmax",
-        #**kwargs: For backwards compatibility only.
-    )
+    model = Model.model()
 
+    for index, layer in enumerate(model.layers):
+        percentage_of_retrain = 0.2 # max is 1 (all layers) last layer is 0
+        if index < int(len(model.layers) * (1 - percentage_of_retrain)):
+            layer.trainable = False
+        else:
+            layer.trainable = True
 
-    x = base_model.output
-    x = keras.layers.GlobalAveragePooling2D()(x)
-    x = keras.layers.Dense(1024,activation='relu')(x) #we add dense layers so that the model can learn more complex functions and classify for better results.
-    x = keras.layers.Dense(1024,activation='relu')(x) #dense layer 2
-    x = keras.layers.Dense(512,activation='relu')(x) #dense layer 3
-    preds = keras.layers.Dense(1, activation='sigmoid')(x) #final layer with softmax activation
-    model = keras.Model(inputs=base_model.input,outputs=preds)
+    model.summary()
+    print("len(model.layers) :", len(model.layers))
 
     #COMPILE
     optimizer = keras.optimizers.RMSprop()
