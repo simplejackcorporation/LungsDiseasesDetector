@@ -89,5 +89,6 @@ if __name__ == '__main__':
 
     data_generator = DataGenerator(base_path=temp_base_path)
     item = data_generator[0]
-    cv2.imshow("cropped", item[0])
+    print(item[0].shape)
+    cv2.imshow("cropped", item[0][0])
     cv2.waitKey(0)

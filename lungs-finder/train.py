@@ -51,6 +51,5 @@ def train():
                         epochs=EPOCHS,
                         use_multiprocessing=True)
 
-
 if __name__ == '__main__':
     train()

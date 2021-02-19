@@ -7,7 +7,7 @@ import lungs_finder as lf
 class Utils:
 
     @staticmethod
-    def scale(arr, out_range=(0, 255)):
+    def normalize(arr, out_range=(0, 255)):
         # y = (x - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
         y = ((arr - arr.min()) * (1 / (arr.max() - arr.min()) * 255)).astype('uint8')
         return y
@@ -34,18 +34,48 @@ class Utils:
         return cv2.resize(image, (width, height))
 
     @staticmethod
+    def convert_dicom_to_img(path):
+        image = pydicom.dcmread(path).pixel_array
+        return image
+
+    @staticmethod
+    def preprocess_img(image):
+        # image = Utils.normalize(image)
+        # image = Utils.proportional_resize(image, 512)
+        image = Utils.reverted_proportional_resize(image, 1024)
+        return image
+
+    @staticmethod
     # DON"T WORK FOR DATA GENERATOR
-    def getIMAGE_DICOM(dicom_item_path):
-        image = pydicom.dcmread(dicom_item_path).pixel_array
-
-        image = Utils.scale(image)
-
-        image = Utils.proportional_resize(image, 512)
-
+    def cropSepareteLungsImages(image):
         right_lung_hog_rectangle = lf.find_right_lung_hog(image)
-        right_lung_img = Utils.crop_rect(image, right_lung_hog_rectangle)
-
         left_lung_hog_rectangle = lf.find_left_lung_hog(image)
+
+        right_lung_img = Utils.crop_rect(image, right_lung_hog_rectangle)
         left_lung_img = Utils.crop_rect(image, left_lung_hog_rectangle)
 
         return [left_lung_img, right_lung_img]
+
+    @staticmethod
+    # DON"T WORK FOR DATA GENERATOR
+    def cropLungsAreaImage(image):
+        l_x, l_y, l_width, l_height = lf.find_left_lung_hog(image)
+        r_x, r_y, r_width, r_height  = lf.find_right_lung_hog(image)
+
+        crop_height = max(l_height, r_height)
+        crop_y = min(l_y, r_y)
+        crop_width = r_x - l_x
+        crop_rect = (l_x, crop_y, crop_width, crop_height)
+        crop_img = Utils.crop_rect(image, crop_rect)
+
+        right_lung_img = Utils.crop_rect(image, crop_img)
+        left_lung_img = Utils.crop_rect(image, crop_img)
+
+        return [left_lung_img, right_lung_img]
+
+if __name__ == '__main__':
+    path = r"C:\Users\m\Desktop\datasets\dicom_train\small_0b630100496870b457008b0f7dae1ea5.dicom.png"
+    image = cv2.imread(path)
+    image = Utils.preprocess_img(image)
+
+    cv2.imshow("test", image)
