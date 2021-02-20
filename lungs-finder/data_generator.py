@@ -11,7 +11,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def __init__(self,
                  base_path,
-                 batch_size=16):
+                 batch_size=8):
         self.base_path = base_path
         self.batch_size = batch_size
 
@@ -36,16 +36,25 @@ class DataGenerator(keras.utils.Sequence):
             image = cv2.imread(item_path)
             image = Utils.cropLungsAreaImage(image, item_path)
 
-            if image is None:
+
+            try:
+                image = cv2.resize(image, (224, 224))
+            except Exception as e:
+                print("VOVA HERE")
+                print(e)
+                print(item_path)
                 continue
 
-            image = cv2.resize(image, (224, 224))
             image = Utils.normalize(image)
 
             X[ind] = image
+            ind += 1
 
-        temp_y = np.empty((self.batch_size, 1))
-        return X, temp_y
+        temp_n = 5
+        temp_rect_y = np.zeros((self.batch_size, temp_n, 4))
+        temp_class_y = np.zeros((self.batch_size, temp_n, 1))
+
+        return X, [temp_rect_y, temp_class_y]
 
     # def on_epoch_end(self):
     #     'Updates indexes after each epoch'

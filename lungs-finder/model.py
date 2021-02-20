@@ -1,5 +1,5 @@
 import keras
-from keras.layers import GlobalAveragePooling2D, Dense
+from keras.layers import GlobalAveragePooling2D, Dense, Flatten, Reshape
 
 
 class Model:
@@ -7,7 +7,7 @@ class Model:
     def model():
         # MODEL
         base_model = keras.applications.MobileNetV2(
-            # input_shape=(224, 224, 3),
+            input_shape=(224, 224, 3),
             # alpha=1.0,
             include_top=False,
             weights="imagenet",
@@ -19,11 +19,26 @@ class Model:
         )
 
         x = base_model.output
+
         x = GlobalAveragePooling2D()(x)
         x = Dense(1024, activation='relu')(x)
         x = Dense(1024, activation='relu')(x)
         x = Dense(512, activation='relu')(x)
-        preds = Dense(1, activation='sigmoid')(x)
-        model = keras.Model(inputs=base_model.input, outputs=preds)
+
+        class_x = Dense((5 * 4), activation='relu')(x)
+        class_x = Reshape((5,  4))(class_x)
+
+        rect_x = Dense((5 * 4), activation='relu')(x)
+        rect_x = Reshape((5,  4))(rect_x)
+
+        rects_predictions = Dense(4, activation='linear', name="rect_output")(rect_x)
+        class_predicions = Dense(1, activation='sigmoid', name="class_output")(class_x)
+
+        model = keras.Model(inputs=base_model.input, outputs=[rects_predictions, class_predicions])
 
         return model
+
+if __name__ == '__main__':
+    model = Model.model()
+    model.summary()
+    print(model.output.shape)

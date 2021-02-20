@@ -94,7 +94,6 @@ class Utils:
 
         right_rect, left_rect = Utils.get_left_rignt_hog_predictions(image)
 
-
         if right_rect is not None:
             r_rect = Utils.applyDeltas(right_rect, x_delta, y_delta)
 

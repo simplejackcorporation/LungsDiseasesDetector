@@ -7,7 +7,9 @@ from model import Model
 
 
 def custom_loss(y_true, y_pred):
-    y_true = K.print_tensor(y_true)
+    print("custom loss")
+    print("y_pred ", y_pred)
+
     y_pred = K.print_tensor(y_pred)
     return y_true - y_pred
 
@@ -37,8 +39,13 @@ def train():
     print("len(model.layers) :", len(model.layers))
 
     #COMPILE
+    losses = {
+        "rect_output": "mse",
+        "class_output": "categorical_crossentropy",
+    }
+
     optimizer = keras.optimizers.RMSprop()
-    loss = custom_loss
+    loss = losses # custom_loss
 
     model.compile(
         optimizer=optimizer,
@@ -52,10 +59,13 @@ def train():
     # **kwargs	Arguments supported for backwards compatibility only.
     )
 
+
+
     #TRAIN
     model.fit_generator(generator=training_generator,
                         # validation_data=validation_generator,
-                        epochs=EPOCHS,
+                        epochs=1,
+                        steps_per_epoch=100,
                         use_multiprocessing=True)
 
 if __name__ == '__main__':
