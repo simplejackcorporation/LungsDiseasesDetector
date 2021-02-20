@@ -39,54 +39,102 @@ class Utils:
         return image
 
     @staticmethod
-    # DON"T WORK FOR DATA GENERATOR
-    def cropSepareteLungsImages(image):
+    def get_left_rignt_hog_predictions(image):
         right_lung_hog_rectangle = lf.find_right_lung_hog(image)
         left_lung_hog_rectangle = lf.find_left_lung_hog(image)
 
-        right_lung_img = Utils.crop_rect(image, right_lung_hog_rectangle)
-        left_lung_img = Utils.crop_rect(image, left_lung_hog_rectangle)
+        if right_lung_hog_rectangle is None and left_lung_hog_rectangle is None:
+            return [None, None]
 
-        return [left_lung_img, right_lung_img]
+        ### !!!
+        ### [ Right lung Left lung ]
+        return right_lung_hog_rectangle, left_lung_hog_rectangle
+
 
     @staticmethod
     # DON"T WORK FOR DATA GENERATOR
-    def cropLungsAreaImage(image):
-        r_x, r_y, r_width, r_height = lf.find_left_lung_hog(image)
-        l_x, l_y, l_width, l_height = lf.find_right_lung_hog(image)
+    def cropSepareteLungsImages(image):
+        right_rect, left_rect = Utils.get_left_rignt_hog_predictions(image)
+
+        right_lung_img = None
+        if right_rect is not None:
+            right_lung_img = Utils.crop_rect(image, right_rect)
+
+        left_lung_img = None
+        if left_rect is not None:
+            left_lung_img = Utils.crop_rect(image, left_rect)
+
+        return [right_lung_img, left_lung_img]
+
+    @staticmethod
+    # DON"T WORK FOR DATA GENERATOR
+    def applyDeltas(rect, x_delta, y_delta):
+        x, y, width, height = rect
+
+        if x - x_delta < 0:
+            x = 0
+        else:
+            x -= x_delta
+            height += y_delta
+
+        if y - y_delta < 0:
+            y = 0
+        else:
+            y -= y_delta
+            width += x_delta
+
+        return x, y, width, height
+
+    @staticmethod
+    # DON"T WORK FOR DATA GENERATOR
+    def cropLungsAreaImage(image, item_path=None):
+        x_delta = 20
+
+        y_delta = 20
+
+        right_rect, left_rect = Utils.get_left_rignt_hog_predictions(image)
+
+
+        if right_rect is not None:
+            r_rect = Utils.applyDeltas(right_rect, x_delta, y_delta)
+
+            if left_rect is None:
+                return Utils.crop_rect(image, r_rect)
+
+        if left_rect is not None:
+            l_rect = Utils.applyDeltas(left_rect, x_delta, y_delta)
+
+            if right_rect is None:
+                return Utils.crop_rect(image, l_rect)
+
+        r_x, r_y, _, r_height = r_rect
+        l_x, l_y, _, l_height = l_rect
 
         crop_height = max(l_height, r_height)
         crop_y = min(l_y, r_y)
-        crop_width = r_x - l_x
+        crop_width = l_x - r_x
         crop_x = l_x
 
-        y_delta = 20
-        x_delta = 20
-
-        if crop_x - x_delta < 0:
-            crop_x = 0
-        else:
-            crop_x = crop_x - x_delta
-
-        if crop_y - y_delta < 0:
-            crop_y = 0
-        else:
-            crop_y = crop_y - y_delta
-
-        crop_rect = crop_x, crop_y, crop_height + y_delta, crop_width + x_delta
-
-        # print("r_x {} l_x {}".format(r_x, l_x))
-        # print("crop_rect", crop_rect)
+        crop_rect = Utils.applyDeltas((crop_x, crop_y, crop_width, crop_height), x_delta, y_delta)
         crop_img = Utils.crop_rect(image, crop_rect)
 
         return crop_img
 
 if __name__ == '__main__':
-    name = "small_5c23e16f590703222743a8895b41e898.dicom.png"
+    # L VOVA HERE C:\Users\m\Desktop\datasets\dicom_train\small_23f29659e174d2c4651857bf304a5d75.dicom.png
+
+
+    name = "small_23f29659e174d2c4651857bf304a5d75.dicom.png"
     path = r"C:\Users\m\Desktop\datasets\dicom_train\{}".format(name)
     image = cv2.imread(path)
     image = Utils.normalize(image)
-    image = Utils.cropLungsAreaImage(image)
+    # image = Utils.cropLungsAreaImage(image)
+    left, right = Utils.cropSepareteLungsImages(image)
 
-    cv2.imshow("test", image)
+    if left is not None:
+        cv2.imshow("test", left)
+
+    if right is not None:
+        cv2.imshow("test", right)
+
     cv2.waitKey(0)

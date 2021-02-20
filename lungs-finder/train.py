@@ -1,19 +1,15 @@
 import os
 import keras
+import keras.backend as K
 
 from data_generator import DataGenerator
 from model import Model
-from utils import Utils
 
-def custom_loss(y_true , y_pred):
-    # y_true,
-    # y_pred x, y, w, h
-    # loss = keras.losses.MSE
 
-    print("\n\n y_true", y_true)
-
-    print("\ny_pred", y_pred)
-
+def custom_loss(y_true, y_pred):
+    y_true = K.print_tensor(y_true)
+    y_pred = K.print_tensor(y_pred)
+    return y_true - y_pred
 
 
 def train():
@@ -42,12 +38,13 @@ def train():
 
     #COMPILE
     optimizer = keras.optimizers.RMSprop()
-    loss = keras.losses.MSE # custom_loss
+    loss = custom_loss
 
     model.compile(
         optimizer=optimizer,
         loss=loss,
         # metrics=None,
+
         # loss_weights=None,
         # weighted_metrics=None,
         # run_eagerly=None,

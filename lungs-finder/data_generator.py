@@ -30,11 +30,15 @@ class DataGenerator(keras.utils.Sequence):
 
         X = np.empty((self.batch_size, 224, 224, 3))
 
-        for ind, item_path in enumerate(batch_items_paths):
-
+        ind = 0
+        while ind < self.batch_size:
+            item_path = batch_items_paths[ind]
             image = cv2.imread(item_path)
+            image = Utils.cropLungsAreaImage(image, item_path)
 
-            image = Utils.cropLungsAreaImage(image)
+            if image is None:
+                continue
+
             image = cv2.resize(image, (224, 224))
             image = Utils.normalize(image)
 

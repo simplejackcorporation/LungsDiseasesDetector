@@ -1,6 +1,7 @@
 import keras
 from keras.layers import GlobalAveragePooling2D, Dense
 
+
 class Model:
     @staticmethod
     def model():
@@ -24,4 +25,5 @@ class Model:
         x = Dense(512, activation='relu')(x)
         preds = Dense(1, activation='sigmoid')(x)
         model = keras.Model(inputs=base_model.input, outputs=preds)
-        return  model
+
+        return model
