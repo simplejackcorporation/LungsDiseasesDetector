@@ -18,11 +18,13 @@ def train():
     #DATASET
     BASE_PATH = r"C:\Users\m\Desktop\datasets"
     EPOCHS = 10
+    lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
 
-    train_path = os.path.join(BASE_PATH, r"dicom_train")
+    train_path = os.path.join(lungs_train_2000_PATH, "images")#os.path.join(BASE_PATH, r"dicom_train")
+    training_generator = DataGenerator(base_path=train_path,
+                                   y_base_path=lungs_train_2000_PATH)
+
     # validation_path = os.path.join(BASE_PATH, r"dataset\validation")
-
-    training_generator = DataGenerator(train_path)
     # validation_generator = DataGenerator(validation_path)
 
     #MODEL
@@ -46,6 +48,7 @@ def train():
 
     optimizer = keras.optimizers.RMSprop()
     loss = losses # custom_loss
+    # loss = custom_loss
 
     model.compile(
         optimizer=optimizer,

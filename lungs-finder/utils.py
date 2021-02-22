@@ -119,6 +119,31 @@ class Utils:
 
         return crop_img
 
+    @staticmethod
+    def get_class_count_dict(p_data_frame):
+        class_count_dict = {}
+
+        for ind, row in p_data_frame.iterrows():
+            class_id = row.class_id
+
+            ### !!!!
+            ### temporary
+            if class_id == 14:
+                continue
+
+            rect = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
+
+            if class_id not in class_count_dict:
+                class_count_dict[class_id] = {"count" : 1, "rects": [rect]}
+            else:
+                class_count_dict[class_id]["count"] += 1
+                class_count_dict[class_id]["rects"].append(rect)
+
+        return class_count_dict
+
+
+
+
 if __name__ == '__main__':
     # L VOVA HERE C:\Users\m\Desktop\datasets\dicom_train\small_23f29659e174d2c4651857bf304a5d75.dicom.png
 
