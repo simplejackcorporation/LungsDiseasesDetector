@@ -43,13 +43,13 @@ class DataGenerator(keras.utils.Sequence):
 
         X = np.empty((self.batch_size, 224, 224, 3))
         rect_Y = np.zeros((self.batch_size, temp_n, 4))
-        class_Y = np.zeros((self.batch_size, temp_n, 1))
+        class_Y = np.zeros((self.batch_size, temp_n))
 
         ind = 0
         while ind < self.batch_size:
             item_path = batch_items_paths[ind]
             image = cv2.imread(item_path)
-            image = Utils.cropLungsAreaImage(image, item_path)
+            # image = Utils.cropLungsAreaImage(image, item_path)
 
 
             try:
@@ -63,16 +63,22 @@ class DataGenerator(keras.utils.Sequence):
             image = Utils.normalize(image)
 
             id = item_path.split("\\")[-1].split(".")[0].split("_")[1]
-            rect_Y[ind], class_Y[ind] = self.getYForID(id)
+            rect, class_id = self.getYForID(id)
+
+            rect_Y[ind] = rect
+            class_Y[ind] = class_id
+
 
             # print(Y)
             # print(id)
-            # Y = self.getYForID(item_path)
             X[ind] = image
              # = Y[0]
              # = Y[1]
 
             ind += 1
+
+        print("class_y shape", class_Y.shape)
+        print("rect_Y shape", rect_Y.shape)
 
         return X, [rect_Y, class_Y]
 
@@ -85,10 +91,8 @@ class DataGenerator(keras.utils.Sequence):
         for index, row in self.pandas_data_frame.iterrows():
             if row.image_id == id:
                 class_id = row.class_id
-
                 if class_id == 14: # no findings
                     return [[self.get_average_random_frame()], class_id]
-
 
                 x, y, width, height = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
                 return [x, y, width, height], class_id
@@ -111,12 +115,10 @@ def test_show_image(path):
 
     start_time = time.time()
     items = data_generator[0]
-    print(items.shape)
+    print(items[1][1].shape)
     print("Item generation time:", time.time() - start_time)
 
-    batch_image = items[0]
-    print("batch_image.shape", batch_image.shape)
-    cv2.imshow("batch_image", batch_image)
+    # cv2.imshow("batch_image", batch_image)
     cv2.waitKey(0)
 
 

@@ -31,8 +31,9 @@ def train():
     model = Model.model()
 
     for index, layer in enumerate(model.layers):
-        percentage_of_retrain = 0.2 # max is 1 (all layers) last layer is 0
-        if index < int(len(model.layers) * (1 - percentage_of_retrain)):
+        last_train_layer = int(len(model.layers) - 10)
+
+        if index < last_train_layer:
             layer.trainable = False
         else:
             layer.trainable = True
@@ -43,7 +44,7 @@ def train():
     #COMPILE
     losses = {
         "rect_output": "mse",
-        "class_output": "categorical_crossentropy",
+        "class_output": "sparse_categorical_crossentropy",
     }
 
     optimizer = keras.optimizers.RMSprop()
