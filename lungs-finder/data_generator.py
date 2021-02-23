@@ -5,8 +5,7 @@ import keras
 import cv2
 from utils import Utils
 import time
-
-import pandas
+import pandas as pd
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
@@ -15,6 +14,7 @@ class DataGenerator(keras.utils.Sequence):
                  base_path,
                  y_base_path,
                  batch_size=8):
+        print("base_path", base_path)
 
         self.shuffle = True
 
@@ -24,9 +24,8 @@ class DataGenerator(keras.utils.Sequence):
         self.items_paths = glob.glob(os.path.join(self.base_path, "*"))
 
         self.pandas_data_frame = pd.read_csv(os.path.join(y_base_path, "train.csv"))
-        self.class_counts_dict = Utils.get_class_count_dict(self.pandas_data_frame)
+        self.class_counts_dict = Utils.get_class_count_dict(self.pandas_data_frame, self.items_paths)
 
-        print("self.base_path", self.base_path)
 
         # print("self.items_paths", self.items_paths)
         self.on_epoch_end()
@@ -42,8 +41,9 @@ class DataGenerator(keras.utils.Sequence):
         batch_items_paths = self.items_paths[index * self.batch_size:(index + 1) * self.batch_size]
 
         X = np.empty((self.batch_size, 224, 224, 3))
-        rect_Y = np.zeros((self.batch_size, temp_n, 4))
-        class_Y = np.zeros((self.batch_size, temp_n))
+        # rect_Y = np.zeros((self.batch_size, temp_n, 4))
+        # class_Y = np.zeros((self.batch_size, temp_n))
+        class_Y = np.zeros((self.batch_size, 1))
 
         ind = 0
         while ind < self.batch_size:
@@ -65,8 +65,13 @@ class DataGenerator(keras.utils.Sequence):
             id = item_path.split("\\")[-1].split(".")[0].split("_")[1]
             rect, class_id = self.getYForID(id)
 
-            rect_Y[ind] = rect
-            class_Y[ind] = class_id
+            # rect_Y[ind] = rect
+
+            if class_id == 14:
+                class_Y[ind] = 0
+            else:
+                class_Y[ind] = 1
+
 
 
             # print(Y)
@@ -77,10 +82,11 @@ class DataGenerator(keras.utils.Sequence):
 
             ind += 1
 
-        print("class_y shape", class_Y.shape)
-        print("rect_Y shape", rect_Y.shape)
+        # print("class_y shape", class_Y.shape)
+        # print("rect_Y shape", rect_Y.shape)
+        # return X, [rect_Y, class_Y]
 
-        return X, [rect_Y, class_Y]
+        return X, class_Y
 
     def on_epoch_end(self):
         self.indexes = np.arange(len(self.items_paths))
@@ -109,8 +115,8 @@ class DataGenerator(keras.utils.Sequence):
 DICOM_PATH = r"C:\Users\m\Desktop\datasets\dicom_train"
 lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
 
-def test_show_image(path):
-    data_generator = DataGenerator(base_path=os.path.join(lungs_train_2000_PATH, "images"),
+def test_show_image():
+    data_generator = DataGenerator(base_path=os.path.join(lungs_train_2000_PATH, "train"),
                                    y_base_path=lungs_train_2000_PATH)
 
     start_time = time.time()
@@ -121,9 +127,30 @@ def test_show_image(path):
     # cv2.imshow("batch_image", batch_image)
     cv2.waitKey(0)
 
+import collections
 
-import pandas as pd
+def test_class_dict():
+    data_generator = DataGenerator(base_path=os.path.join(lungs_train_2000_PATH, "train"),
+                                   y_base_path=lungs_train_2000_PATH)
+
+    class_counts_dict = data_generator.class_counts_dict
+    values = [class_counts_dict[k]["count"] for k in class_counts_dict.keys()]
+    min_count_value = min(values)
+
+    print(min_count_value)
+
+    for key in class_counts_dict.keys():
+        print("key {}, count {}".format(key, class_counts_dict[key]["count"]))
+
+    print("VOVA")
+    for key in class_counts_dict.keys():
+        print(class_counts_dict[key]["img_objs"])
+
+        sliced_img_objs = len(class_counts_dict[key]["img_objs"])
+        class_counts_dict[key]["img_objs"] = sliced_img_objs
+        print("key {}, count {}".format(key, len(class_counts_dict[key]["img_objs"])))
 
 if __name__ == '__main__':
-    test_show_image(lungs_train_2000_PATH)
+    # test_show_image()
+    test_class_dict()
 

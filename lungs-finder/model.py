@@ -31,11 +31,11 @@ class Model:
         rect_x = Dense((5 * 4), activation='relu')(x)
         rect_x = Reshape((5,  4))(rect_x)
 
-        rects_predictions = Dense(4, activation='linear', name="rect_output")(rect_x)
+        # rects_predictions = Dense(4, activation='linear', name="rect_output")(rect_x)
         class_predicions = Dense(1, activation='sigmoid', name="class_output")(class_x)
 
-        model = keras.Model(inputs=base_model.input, outputs=[rects_predictions, class_predicions])
-
+        model = keras.Model(inputs=base_model.input, outputs=class_predicions)
+        #         model = keras.Model(inputs=base_model.input, outputs=[rects_predictions, class_predicions])
         return model
 
 if __name__ == '__main__':

@@ -16,22 +16,21 @@ def custom_loss(y_true, y_pred):
 
 def train():
     #DATASET
-    BASE_PATH = r"C:\Users\m\Desktop\datasets"
     EPOCHS = 10
     lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
 
-    train_path = os.path.join(lungs_train_2000_PATH, "images")#os.path.join(BASE_PATH, r"dicom_train")
+    train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
     training_generator = DataGenerator(base_path=train_path,
-                                   y_base_path=lungs_train_2000_PATH)
+                                       y_base_path=lungs_train_2000_PATH)
 
-    # validation_path = os.path.join(BASE_PATH, r"dataset\validation")
-    # validation_generator = DataGenerator(validation_path)
+    validation_path = os.path.join(lungs_train_2000_PATH, "validation")
+    validation_generator = DataGenerator(validation_path, y_base_path=lungs_train_2000_PATH)
 
     #MODEL
     model = Model.model()
 
     for index, layer in enumerate(model.layers):
-        last_train_layer = int(len(model.layers) - 10)
+        last_train_layer = int(len(model.layers) - 5)
 
         if index < last_train_layer:
             layer.trainable = False
@@ -48,13 +47,13 @@ def train():
     }
 
     optimizer = keras.optimizers.RMSprop()
-    loss = losses # custom_loss
+    loss = keras.losses.binary_crossentropy  # losses # custom_loss #
     # loss = custom_loss
 
     model.compile(
         optimizer=optimizer,
         loss=loss,
-        # metrics=None,
+        metrics=['accuracy'],
 
         # loss_weights=None,
         # weighted_metrics=None,
@@ -63,13 +62,20 @@ def train():
     # **kwargs	Arguments supported for backwards compatibility only.
     )
 
+    checkpoint_filepath = r'C:\Users\m\Desktop\LUNGS\lungs-finder\weights'
 
+    model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        save_weights_only=True,
+        monitor='val_accuracy',
+        mode='max',
+        save_best_only=True)
 
     #TRAIN
     model.fit_generator(generator=training_generator,
-                        # validation_data=validation_generator,
-                        epochs=1,
-                        steps_per_epoch=100,
+                        validation_data=validation_generator,
+                        epochs=10,
+                        callbacks=[model_checkpoint_callback],
                         use_multiprocessing=True)
 
 if __name__ == '__main__':

@@ -120,28 +120,49 @@ class Utils:
         return crop_img
 
     @staticmethod
-    def get_class_count_dict(p_data_frame):
+    def get_class_count_dict(p_data_frame, paths):
         class_count_dict = {}
-
+        buff_paths = paths
         for ind, row in p_data_frame.iterrows():
             class_id = row.class_id
+            image_id = row.image_id
 
             ### !!!!
             ### temporary
-            if class_id == 14:
-                continue
+            # if class_id == 14:
+            #     continue
 
             rect = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
+            buff_paths, img_path = Utils.filter_paths(buff_paths, image_id)
 
             if class_id not in class_count_dict:
-                class_count_dict[class_id] = {"count" : 1, "rects": [rect]}
+                img_obj = {"img_path": img_path, "rects":[rect]}
+                class_count_dict[class_id]= {"count" : 1, "img_objs": {image_id : [img_obj]}}
+
             else:
                 class_count_dict[class_id]["count"] += 1
-                class_count_dict[class_id]["rects"].append(rect)
+
+                if image_id not in class_count_dict[class_id]:
+                    img_obj = {"img_path": img_path, "rects": [rect]}
+                    class_count_dict[class_id]["img_objs"] = {image_id: [img_obj]}
+                else:
+                    class_count_dict[class_id]["img_objs"][image_id]["rects"].append(rect)
+
+
 
         return class_count_dict
 
+    @staticmethod
+    def filter_paths(paths, image_id):
+        img_path = None
+        buff_paths = paths
 
+        for index, path in enumerate(buff_paths):
+            if image_id in path:
+                img_path = path
+                buff_paths.pop(index)
+                break
+        return buff_paths, img_path
 
 
 if __name__ == '__main__':
