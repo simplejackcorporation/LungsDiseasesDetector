@@ -1,8 +1,7 @@
 import cv2
-import glob
-import os
 import pydicom
 import lungs_finder as lf
+import numpy as np
 
 class Utils:
 
@@ -120,50 +119,36 @@ class Utils:
         return crop_img
 
     @staticmethod
-    def get_class_count_dict(p_data_frame, paths):
+    def isNaN(num):
+        return num != num
+
+    @staticmethod
+    def get_class_count_dict(p_data_frame):
         class_count_dict = {}
-        buff_paths = paths
         for ind, row in p_data_frame.iterrows():
             class_id = row.class_id
             image_id = row.image_id
-
-            ### !!!!
-            ### temporary
-            # if class_id == 14:
-            #     continue
-
+  
             rect = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
-            buff_paths, img_path = Utils.filter_paths(buff_paths, image_id)
 
             if class_id not in class_count_dict:
-                img_obj = {"img_path": img_path, "rects":[rect]}
-                class_count_dict[class_id]= {"count" : 1, "img_objs": {image_id : [img_obj]}}
+                class_count_dict[class_id] = {image_id: [rect]}
 
             else:
-                class_count_dict[class_id]["count"] += 1
-
                 if image_id not in class_count_dict[class_id]:
-                    img_obj = {"img_path": img_path, "rects": [rect]}
-                    class_count_dict[class_id]["img_objs"] = {image_id: [img_obj]}
+                    class_count_dict[class_id][image_id] = [rect]
                 else:
-                    class_count_dict[class_id]["img_objs"][image_id]["rects"].append(rect)
+                    rects_array = class_count_dict[class_id][image_id]
 
+                    # if Utils.isNaN(rect[0]):
+                    #     if class_id == 14:
+                    #         ## To DO
+                    #     else:
 
+                    rects_array.append(rect)
+                    class_count_dict[class_id][image_id] = rects_array
 
         return class_count_dict
-
-    @staticmethod
-    def filter_paths(paths, image_id):
-        img_path = None
-        buff_paths = paths
-
-        for index, path in enumerate(buff_paths):
-            if image_id in path:
-                img_path = path
-                buff_paths.pop(index)
-                break
-        return buff_paths, img_path
-
 
 if __name__ == '__main__':
     # L VOVA HERE C:\Users\m\Desktop\datasets\dicom_train\small_23f29659e174d2c4651857bf304a5d75.dicom.png

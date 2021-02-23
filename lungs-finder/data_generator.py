@@ -12,19 +12,27 @@ class DataGenerator(keras.utils.Sequence):
 
     def __init__(self,
                  base_path,
-                 y_base_path,
-                 batch_size=8):
-        print("base_path", base_path)
+                 batch_size=8,
+                 is_val=False):
 
+        self.is_val = is_val
         self.shuffle = True
 
         self.base_path = base_path
         self.batch_size = batch_size
 
-        self.items_paths = glob.glob(os.path.join(self.base_path, "*"))
+        self.pandas_data_frame = pd.read_csv(os.path.join(self.base_path, "train.csv"))
+        self.class_counts_dict = Utils.get_class_count_dict(self.pandas_data_frame)
 
-        self.pandas_data_frame = pd.read_csv(os.path.join(y_base_path, "train.csv"))
-        self.class_counts_dict = Utils.get_class_count_dict(self.pandas_data_frame, self.items_paths)
+        self.items_paths = []
+        for key, value in self.class_counts_dict.items():
+            for img_id_key in value.keys():
+                print(img_id_key)
+                img_name = "small_{}.png".format(img_id_key)
+                path = os.path.join(base_path, img_name)
+                self.items_paths.append((path, key))
+
+        self.equalize_dataset(self.is_val)
 
 
         # print("self.items_paths", self.items_paths)
@@ -47,7 +55,8 @@ class DataGenerator(keras.utils.Sequence):
 
         ind = 0
         while ind < self.batch_size:
-            item_path = batch_items_paths[ind]
+            item_path, class_id = batch_items_paths[ind]
+
             image = cv2.imread(item_path)
             # image = Utils.cropLungsAreaImage(image, item_path)
 
@@ -58,21 +67,15 @@ class DataGenerator(keras.utils.Sequence):
                 print("VOVA HERE")
                 print(e)
                 print(item_path)
+                ind += 1
                 continue
 
             image = Utils.normalize(image)
-
-            id = item_path.split("\\")[-1].split(".")[0].split("_")[1]
-            rect, class_id = self.getYForID(id)
-
-            # rect_Y[ind] = rect
 
             if class_id == 14:
                 class_Y[ind] = 0
             else:
                 class_Y[ind] = 1
-
-
 
             # print(Y)
             # print(id)
@@ -103,13 +106,30 @@ class DataGenerator(keras.utils.Sequence):
                 x, y, width, height = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
                 return [x, y, width, height], class_id
 
-    def get_average_random_frame(self):
-        all_keys = list(self.class_counts_dict.keys())
-        rand_key_index = np.random.choice(len(all_keys))
-        key = all_keys[rand_key_index]
-        all_selected_values = self.class_counts_dict[key]["rects"]
-        random_rect_ind = np.random.choice(len(all_selected_values))
-        return all_selected_values[random_rect_ind]
+
+    def equalize_dataset(self, is_val):
+        lengths = []
+        for key, value in self.class_counts_dict.items():
+            lengths.append(len(list(value.keys())))
+
+        min_count_value = min(lengths)
+        delta = 3
+        for key in self.class_counts_dict.keys():
+            sliced_img_objs = self.class_counts_dict[key]
+
+            buff_dict = sliced_img_objs.copy()
+            for index, item in enumerate(sliced_img_objs):
+                if index > min_count_value:
+                    break
+
+                if is_val is True:
+                    if index > delta:
+                        buff_dict.pop(item, None)
+                else:
+                    if index < delta:
+                        buff_dict.pop(item, None)
+
+            self.class_counts_dict[key] = buff_dict
 
 
 DICOM_PATH = r"C:\Users\m\Desktop\datasets\dicom_train"
@@ -133,22 +153,10 @@ def test_class_dict():
     data_generator = DataGenerator(base_path=os.path.join(lungs_train_2000_PATH, "train"),
                                    y_base_path=lungs_train_2000_PATH)
 
-    class_counts_dict = data_generator.class_counts_dict
-    values = [class_counts_dict[k]["count"] for k in class_counts_dict.keys()]
-    min_count_value = min(values)
+    for key, value in data_generator.class_counts_dict.items():
+        print("key {}, count {}".format(key, len(value)))
 
-    print(min_count_value)
 
-    for key in class_counts_dict.keys():
-        print("key {}, count {}".format(key, class_counts_dict[key]["count"]))
-
-    print("VOVA")
-    for key in class_counts_dict.keys():
-        print(class_counts_dict[key]["img_objs"])
-
-        sliced_img_objs = len(class_counts_dict[key]["img_objs"])
-        class_counts_dict[key]["img_objs"] = sliced_img_objs
-        print("key {}, count {}".format(key, len(class_counts_dict[key]["img_objs"])))
 
 if __name__ == '__main__':
     # test_show_image()

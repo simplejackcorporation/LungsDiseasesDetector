@@ -20,11 +20,8 @@ def train():
     lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
 
     train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
-    training_generator = DataGenerator(base_path=train_path,
-                                       y_base_path=lungs_train_2000_PATH)
-
-    validation_path = os.path.join(lungs_train_2000_PATH, "validation")
-    validation_generator = DataGenerator(validation_path, y_base_path=lungs_train_2000_PATH)
+    training_generator = DataGenerator(base_path=train_path, is_val=False)
+    validation_generator = DataGenerator(train_path, is_val=True)
 
     #MODEL
     model = Model.model()
