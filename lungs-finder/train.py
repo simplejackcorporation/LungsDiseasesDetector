@@ -70,7 +70,7 @@ def train():
 
     #TRAIN
     model.fit_generator(generator=training_generator,
-                        validation_data=validation_generator,
+                        # validation_data=validation_generator,
                         epochs=10,
                         callbacks=[model_checkpoint_callback],
                         use_multiprocessing=True)

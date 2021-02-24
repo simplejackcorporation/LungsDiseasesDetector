@@ -27,7 +27,6 @@ class DataGenerator(keras.utils.Sequence):
         self.items_paths = []
         for key, value in self.class_counts_dict.items():
             for img_id_key in value.keys():
-                print(img_id_key)
                 img_name = "small_{}.png".format(img_id_key)
                 path = os.path.join(base_path, img_name)
                 self.items_paths.append((path, key))
@@ -77,11 +76,7 @@ class DataGenerator(keras.utils.Sequence):
             else:
                 class_Y[ind] = 1
 
-            # print(Y)
-            # print(id)
             X[ind] = image
-             # = Y[0]
-             # = Y[1]
 
             ind += 1
 
@@ -112,23 +107,36 @@ class DataGenerator(keras.utils.Sequence):
         for key, value in self.class_counts_dict.items():
             lengths.append(len(list(value.keys())))
 
-        min_count_value = min(lengths)
-        delta = 3
+        # min_count_value = min(lengths)
+        negative_class_count = 1415
+        min_count_value = int(negative_class_count / (len(lengths) - 1)) # -1 for class 14
+
         for key in self.class_counts_dict.keys():
             sliced_img_objs = self.class_counts_dict[key]
 
+            ### temporary filter
+            if key != "14":
+                if len(sliced_img_objs) < min_count_value:
+                    min_count_value = len(sliced_img_objs)
+
+            start_val_index = int(min_count_value * 0.7)
+
             buff_dict = sliced_img_objs.copy()
+            print("at start vova key {}, len {}".format(key, len(buff_dict)))
+
             for index, item in enumerate(sliced_img_objs):
+
                 if index > min_count_value:
                     break
 
                 if is_val is True:
-                    if index > delta:
-                        buff_dict.pop(item, None)
+                     if index < start_val_index:
+                         buff_dict.pop(index, None)
                 else:
-                    if index < delta:
-                        buff_dict.pop(item, None)
+                    if index > start_val_index:
+                        buff_dict.pop(index, None)
 
+            print("vova key {}, len {}".format(key, len(buff_dict)))
             self.class_counts_dict[key] = buff_dict
 
 
@@ -136,8 +144,9 @@ DICOM_PATH = r"C:\Users\m\Desktop\datasets\dicom_train"
 lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
 
 def test_show_image():
-    data_generator = DataGenerator(base_path=os.path.join(lungs_train_2000_PATH, "train"),
-                                   y_base_path=lungs_train_2000_PATH)
+    train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
+
+    data_generator = DataGenerator(train_path, is_val=True)
 
     start_time = time.time()
     items = data_generator[0]
@@ -150,9 +159,10 @@ def test_show_image():
 import collections
 
 def test_class_dict():
-    data_generator = DataGenerator(base_path=os.path.join(lungs_train_2000_PATH, "train"),
-                                   y_base_path=lungs_train_2000_PATH)
+    train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
 
+    data_generator = DataGenerator(train_path, is_val=True)
+    print("\n \n \n data generator len", len(data_generator))
     for key, value in data_generator.class_counts_dict.items():
         print("key {}, count {}".format(key, len(value)))
 
