@@ -27,6 +27,7 @@ class DataGenerator(keras.utils.Sequence):
         self.pandas_data_frame = self.pandas_data_frame.drop_duplicates(subset=['image_id'])
 
         self.class_counts_dict = Utils.get_class_count_dict(self.pandas_data_frame)
+        self.equalize_dataset(self.is_val)
 
         self.items_paths = []
         for key, value in self.class_counts_dict.items():
@@ -35,11 +36,7 @@ class DataGenerator(keras.utils.Sequence):
                 path = os.path.join(base_path, img_name)
                 self.items_paths.append((path, key))
 
-        self.equalize_dataset(self.is_val)
-
-
-        # print("self.items_paths", self.items_paths)
-        # self.on_epoch_end()
+        self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -75,12 +72,8 @@ class DataGenerator(keras.utils.Sequence):
 
             image = Utils.normalize(image)
 
-            if class_id == 14:
-                class_Y[ind] = 0
-            else:
-                class_Y[ind] = 1
-
             X[ind] = image
+            class_Y[ind] = int(class_id == 14)
 
             ind += 1
 
@@ -91,9 +84,8 @@ class DataGenerator(keras.utils.Sequence):
         return X, class_Y
 
     def on_epoch_end(self):
-        self.indexes = np.arange(len(self.items_paths))
         if self.shuffle is True:
-            np.random.shuffle(self.indexes)
+            np.random.shuffle(self.items_paths)
 
     def getYForID(self, id):
         for index, row in self.pandas_data_frame.iterrows():
