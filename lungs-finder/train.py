@@ -4,6 +4,7 @@ import keras.backend as K
 
 from data_generator import DataGenerator
 from model import Model
+from path_config import PNG_TRAIN_DATASET
 
 
 def custom_loss(y_true, y_pred):
@@ -17,7 +18,7 @@ def custom_loss(y_true, y_pred):
 def train():
     #DATASET
     EPOCHS = 10
-    lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
+    lungs_train_2000_PATH = PNG_TRAIN_DATASET
 
     train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
     training_generator = DataGenerator(base_path=train_path, is_val=False)

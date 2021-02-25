@@ -3,6 +3,8 @@ import os
 import glob
 import keras
 import cv2
+
+from path_config import PNG_TRAIN_DATASET, DICOM_TRAIN_DATASET
 from utils import Utils
 import time
 import pandas as pd
@@ -140,11 +142,11 @@ class DataGenerator(keras.utils.Sequence):
             self.class_counts_dict[key] = buff_dict
 
 
-DICOM_PATH = r"C:\Users\m\Desktop\datasets\dicom_train"
-lungs_train_2000_PATH = r"C:\Users\m\Desktop\datasets\lungs_train_2000"
+DICOM_PATH = DICOM_TRAIN_DATASET
+lungs_train_2000_PATH = PNG_TRAIN_DATASET
 
 def test_show_image():
-    train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
+    train_path = os.path.join(lungs_train_2000_PATH, "train")
 
     data_generator = DataGenerator(train_path, is_val=True)
 

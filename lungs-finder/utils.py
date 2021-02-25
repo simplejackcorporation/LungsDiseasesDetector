@@ -3,6 +3,9 @@ import pydicom
 import lungs_finder as lf
 import numpy as np
 
+from path_config import DICOM_TRAIN_DATASET
+
+
 class Utils:
 
     @staticmethod
@@ -155,7 +158,7 @@ if __name__ == '__main__':
 
 
     name = "small_23f29659e174d2c4651857bf304a5d75.dicom.png"
-    path = r"C:\Users\m\Desktop\datasets\dicom_train\{}".format(name)
+    path = DICOM_TRAIN_DATASET + "\\" + name
     image = cv2.imread(path)
     image = Utils.normalize(image)
     # image = Utils.cropLungsAreaImage(image)
