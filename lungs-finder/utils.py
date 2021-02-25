@@ -143,11 +143,6 @@ class Utils:
                 else:
                     rects_array = class_count_dict[class_id][image_id]
 
-                    # if Utils.isNaN(rect[0]):
-                    #     if class_id == 14:
-                    #         ## To DO
-                    #     else:
-
                     rects_array.append(rect)
                     class_count_dict[class_id][image_id] = rects_array
 

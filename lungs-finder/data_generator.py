@@ -24,6 +24,8 @@ class DataGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
 
         self.pandas_data_frame = pd.read_csv(os.path.join(self.base_path, "train.csv"))
+        self.pandas_data_frame = self.pandas_data_frame.drop_duplicates(subset=['image_id'])
+
         self.class_counts_dict = Utils.get_class_count_dict(self.pandas_data_frame)
 
         self.items_paths = []
@@ -37,7 +39,7 @@ class DataGenerator(keras.utils.Sequence):
 
 
         # print("self.items_paths", self.items_paths)
-        self.on_epoch_end()
+        # self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -105,41 +107,38 @@ class DataGenerator(keras.utils.Sequence):
 
 
     def equalize_dataset(self, is_val):
-        lengths = []
-        for key, value in self.class_counts_dict.items():
-            lengths.append(len(list(value.keys())))
+        counter = 0
+        negative_class_id = 14
 
-        # min_count_value = min(lengths)
-        negative_class_count = 1415
-        min_count_value = int(negative_class_count / (len(lengths) - 1)) # -1 for class 14
 
-        for key in self.class_counts_dict.keys():
-            sliced_img_objs = self.class_counts_dict[key]
+        ### probably can be replaced by some pandas one line
+        number_positive_img_ids = 0
+        for key, item in self.class_counts_dict.items():
+            if key != negative_class_id:
+                number_positive_img_ids += len(item)
+        print("number_positive_img_ids", number_positive_img_ids)
 
-            ### temporary filter
-            if key != "14":
-                if len(sliced_img_objs) < min_count_value:
-                    min_count_value = len(sliced_img_objs)
+        for key, item in self.class_counts_dict.items():
+            img_ids_keys = list(sorted(item.keys()))
 
-            start_val_index = int(min_count_value * 0.7)
+            if key == negative_class_id:
+                img_ids_keys = img_ids_keys[0:number_positive_img_ids]
 
-            buff_dict = sliced_img_objs.copy()
-            print("at start vova key {}, len {}".format(key, len(buff_dict)))
+            start_val_index = int(len(img_ids_keys) * 0.7)
 
-            for index, item in enumerate(sliced_img_objs):
+            if is_val:
+                sliced_keys = img_ids_keys[start_val_index:len(img_ids_keys)]
+            else:
+                sliced_keys = img_ids_keys[0:start_val_index]
 
-                if index > min_count_value:
-                    break
+            buff_dict = {} # sliced_img_objs.copy()
 
-                if is_val is True:
-                     if index < start_val_index:
-                         buff_dict.pop(index, None)
-                else:
-                    if index > start_val_index:
-                        buff_dict.pop(index, None)
+            for img_id_key in sliced_keys:
+                buff_dict[img_id_key] = item[img_id_key]
 
-            print("vova key {}, len {}".format(key, len(buff_dict)))
             self.class_counts_dict[key] = buff_dict
+
+        print("counter", counter)
 
 
 DICOM_PATH = DICOM_TRAIN_DATASET
@@ -163,7 +162,7 @@ import collections
 def test_class_dict():
     train_path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
 
-    data_generator = DataGenerator(train_path, is_val=True)
+    data_generator = DataGenerator(train_path, is_val=False)
     print("\n \n \n data generator len", len(data_generator))
     for key, value in data_generator.class_counts_dict.items():
         print("key {}, count {}".format(key, len(value)))
