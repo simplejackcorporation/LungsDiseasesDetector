@@ -1,59 +1,61 @@
 # your class labels
 import keras
 import numpy as np
-
-classes = ["class_1","class_2", "class_3"]
+import os
+from model_builder import ModelBuilder
+from path_config import TaskType, PNG_TRAIN_DATASET
+from dataset_tool import DatasetTool
+from data_generator import DataGenerator
 
 class AccuracyCallback(keras.callbacks.Callback):
 
-    def __init__(self, test_data):
-        self.test_data = test_data
+    def __init__(self, data_generator):
+        self.data_generator = data_generator
+
 
     def on_epoch_end(self, epoch, logs=None):
-        x_data, y_data = self.test_data
+        test_data = []
 
-        correct = 0
-        incorrect = 0
+        for item in self.data_generator:
+            test_data.append(item)
 
-        x_result = self.model.predict(x_data, verbose=0)
+        item_result_dict = {"correct" : 0,
+                            "incorrect": 0,
+                            "confuse_class": []}
+        result_dict = {}
 
-        x_numpy = []
+        for item in test_data:
+            x_result = self.model.predict(item[0], verbose=0)
+            labels = item[1]
+            for index, pred in enumerate(x_result):
+                unwraped_pred = int(np.argmax(pred))
+                # print(unwraped_pred)
+                label = int(np.argmax(labels[index]))
+                if label not in result_dict:
+                    result_dict[label] = item_result_dict
 
-        for i in classes:
-            self.class_history.append([])
+                if unwraped_pred == label:
+                    result_dict[label]["correct"] += 1
+                else:
+                    result_dict[label]["incorrect"] += 1
+                    result_dict[label]["confuse_class"].append(unwraped_pred)
 
-        class_correct = [0] * len(classes)
-        class_incorrect = [0] * len(classes)
+        for key, value in result_dict.items():
+            acc = value["correct"] / (value["incorrect"] + value["correct"])
+            print("Accuracy {} of class {}".format(acc, key))
 
-        for i in range(len(x_data)):
-            x = x_data[i]
-            y = y_data[i]
+if __name__ == '__main__':
+    task_type = TaskType.MULTICLASS_CLASSIFICATION
+    path = os.path.join(PNG_TRAIN_DATASET, "train")
 
-            res = x_result[i]
+    val_dataset_tool = DatasetTool(path, task_type, True)
 
-            actual_label = np.argmax(y)
-            pred_label = np.argmax(res)
+    n_classes = val_dataset_tool.n_classes
+    validation_generator = DataGenerator(path, val_dataset_tool, is_val=True)
 
-            if(pred_label == actual_label):
-                x_numpy.append(["cor:", str(y), str(res), str(pred_label)])
-                class_correct[actual_label] += 1
-                correct += 1
-            else:
-                x_numpy.append(["inc:", str(y), str(res), str(pred_label)])
-                class_incorrect[actual_label] += 1
-                incorrect += 1
+    model_builder = ModelBuilder(TaskType.MULTICLASS_CLASSIFICATION,
+                                 n_classes)
 
-        print("\tCorrect: %d" %(correct))
-        print("\tIncorrect: %d" %(incorrect))
-
-        for i in range(len(classes)):
-            tot = float(class_correct[i] + class_incorrect[i])
-            class_acc = -1
-            if (tot > 0):
-                class_acc = float(class_correct[i]) / tot
-
-            print("\t%s: %.3f" %(classes[i],class_acc))
-
-        acc = float(correct) / float(correct + incorrect)
-
-        print("\tCurrent Network Accuracy: %.3f" %(acc))
+    callback = AccuracyCallback(validation_generator)
+    callback.model = model_builder.model()
+    callback.on_epoch_end(epoch=2)
