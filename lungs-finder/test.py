@@ -16,7 +16,7 @@ if __name__ == '__main__':
     is_val = False
     path = os.path.join(PNG_TRAIN_DATASET, "train")#os.path.join(BASE_PATH, r"dicom_train")
 
-    task_type = TaskType.BINARY_CLASSIFICATION
+    task_type = TaskType.OBJECT_DETECTION
     dataset_tool = DatasetTool(path, task_type, is_val)
 
     data_generator = DataGenerator(path, dataset_tool,

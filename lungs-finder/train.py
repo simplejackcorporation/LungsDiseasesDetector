@@ -7,13 +7,12 @@ import keras.backend as K
 from accuracy_callback import AccuracyCallback
 from data_generator import DataGenerator
 from model_builder import ModelBuilder
-from path_config import PNG_TRAIN_DATASET, TENSORBOARD_PATH, TaskType
+from path_config import PNG_TRAIN_DATASET, TENSORBOARD_PATH, TaskType, BATCH_SIZE
 from dataset_tool import DatasetTool, TaskType
 
 def train():
     print("GPU:", tf.test.is_gpu_available())
-
-    task_type = TaskType.MULTICLASS_CLASSIFICATION
+    task_type = TaskType.OBJECT_DETECTION
 
     path = os.path.join(PNG_TRAIN_DATASET, "train")
 
@@ -23,11 +22,11 @@ def train():
     n_classes = train_dataset_tool.n_classes if task_type == TaskType.MULTICLASS_CLASSIFICATION else None
     print("n_classes" , n_classes)
 
-    training_generator = DataGenerator(path, train_dataset_tool,  is_val=False)
-    validation_generator = DataGenerator(path, val_dataset_tool, is_val=True)
+    training_generator = DataGenerator(path, train_dataset_tool,  is_val=False, batch_size=BATCH_SIZE)
+    validation_generator = DataGenerator(path, val_dataset_tool, is_val=True, batch_size=BATCH_SIZE)
 
     #MODEL
-    model_builder = ModelBuilder(task_type, n_classes=n_classes)
+    model_builder = ModelBuilder(task_type)
     model = model_builder.model()
 
     for index, layer in enumerate(model.layers):
@@ -36,12 +35,6 @@ def train():
 
     model.summary()
     print("len(model.layers) :", len(model.layers))
-
-    #COMPILE
-    losses = {
-        "rect_output": "mse",
-        "class_output": "categorical_crossentropy",
-    }
 
     optimizer = keras.optimizers.RMSprop()
     loss = model_builder.loss
@@ -74,12 +67,18 @@ def train():
     #     callbacks=[tensorboard_callback])
 
     #TRAIN
-    model.fit_generator(generator=training_generator,
-                        # validation_data=None if task_type == TaskType.MULTICLASS_CLASSIFICATION else validation_generator,
-                        epochs=15,
-                        callbacks=callbacks,
-                        workers=6,
-                        use_multiprocessing=True)
+    model.fit(training_generator,
+              validation_data=None if task_type == TaskType.MULTICLASS_CLASSIFICATION else validation_generator,
+              callbacks=callbacks,
+              epochs=10,
+              use_multiprocessing=True)
+
+    # model.fit_generator(generator=training_generator,
+    #                     # validation_data=,
+    #                     epochs=15,
+    #                     callbacks=callbacks,
+    #                     workers=6,
+    #                     use_multiprocessing=True)
 
 if __name__ == '__main__':
     train()

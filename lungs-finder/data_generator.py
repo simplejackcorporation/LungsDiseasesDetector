@@ -6,7 +6,7 @@ import cv2
 
 from dataset_tool import DatasetTool, TaskType
 
-from path_config import PNG_TRAIN_DATASET, DICOM_TRAIN_DATASET
+from path_config import PNG_TRAIN_DATASET, DICOM_TRAIN_DATASET, BATCH_SIZE
 from utils import Utils
 import time
 import pandas as pd
@@ -17,7 +17,7 @@ class DataGenerator(keras.utils.Sequence):
     def __init__(self,
                  base_path,
                  dataset_tool,
-                 batch_size=8,
+                 batch_size,
                  is_val=False):
 
         self.is_val = is_val
@@ -80,10 +80,10 @@ def create_dg():
     is_val = False
     path = os.path.join(lungs_train_2000_PATH, "train")#os.path.join(BASE_PATH, r"dicom_train")
 
-    task_type = TaskType.BINARY_CLASSIFICATION
+    task_type = TaskType.OBJECT_DETECTION
     dataset_tool = DatasetTool(path, task_type, is_val)
 
-    data_generator = DataGenerator(path, dataset_tool,  is_val=is_val)
+    data_generator = DataGenerator(path, dataset_tool, batch_size=BATCH_SIZE,  is_val=is_val)
 
     return data_generator
 
