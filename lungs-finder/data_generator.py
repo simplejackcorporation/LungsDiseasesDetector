@@ -43,20 +43,16 @@ class DataGenerator(keras.utils.Sequence):
         batch_items_paths = self.items_paths[index * self.batch_size:(index + 1) * self.batch_size]
 
         X = np.empty((self.batch_size, 224, 224, 3))
-        class_Y = np.zeros((self.batch_size, self.dataset_tool.n_classes))
-        # class_Y = np.zeros((self.batch_size, self.dataset_tool.n_classes))
+        class_Y = self.dataset_tool.create_label_placeholder(self.batch_size)
 
         ind = 0
         while ind < self.batch_size:
             item_path, class_id = batch_items_paths[ind]
 
             image = cv2.imread(item_path)
-            # image = Utils.cropLungsAreaImage(image, item_path)
-
             try:
                 image = cv2.resize(image, (224, 224))
             except Exception as e:
-                print("VOVA HERE")
                 print(e)
                 print(item_path)
                 ind += 1
@@ -66,39 +62,16 @@ class DataGenerator(keras.utils.Sequence):
 
             X[ind] = image
 
-            # doesnt work correctly
-            # self.dataset_tool.get_label(class_id)
-
-            if self.dataset_tool.task_type == TaskType.BINARY_CLASSIFICATION:
-                class_Y[ind] = int(class_id == 14)
-            else:
-                class_index = list(sorted(self.dataset_tool.class_counts_dict.keys())).index(class_id)
-                zeros_arr = np.zeros(3)
-                zeros_arr[class_index] = 1
-                class_Y[ind] = zeros_arr#self.dataset_tool.get_label(class_id)
+            label = self.dataset_tool.get_label(class_id)
+            class_Y[ind] = label
 
             ind += 1
-
-        # print("class_y shape", class_Y.shape)
-        # print("rect_Y shape", rect_Y.shape)
-        # return X, [rect_Y, class_Y]
 
         return X, class_Y
 
     def on_epoch_end(self):
         if self.shuffle is True:
             np.random.shuffle(self.items_paths)
-
-
-    def getYForID(self, id):
-        for index, row in self.pandas_data_frame.iterrows():
-            if row.image_id == id:
-                class_id = row.class_id
-                if class_id == 14: # no findings
-                    return [[self.get_average_random_frame()], class_id]
-
-                x, y, width, height = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
-                return [x, y, width, height], class_id
 
 DICOM_PATH = DICOM_TRAIN_DATASET
 lungs_train_2000_PATH = PNG_TRAIN_DATASET

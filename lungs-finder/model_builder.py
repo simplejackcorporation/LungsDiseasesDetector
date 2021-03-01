@@ -48,6 +48,13 @@ class ModelBuilder:
         #         model = keras.Model(inputs=base_model.input, outputs=[rects_predictions, class_predicions])
         return model
 
+    def custom_loss(y_true, y_pred):
+        print("custom loss")
+        print("y_pred ", y_pred)
+
+        y_pred = K.print_tensor(y_pred)
+        return y_true - y_pred
+
 if __name__ == '__main__':
     n_class = 3
     model_builder = ModelBuilder(TaskType.MULTICLASS_CLASSIFICATION, n_class)

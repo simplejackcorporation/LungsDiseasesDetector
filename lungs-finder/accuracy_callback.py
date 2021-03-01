@@ -19,9 +19,7 @@ class AccuracyCallback(keras.callbacks.Callback):
         for item in self.data_generator:
             test_data.append(item)
 
-        item_result_dict = {"correct" : 0,
-                            "incorrect": 0,
-                            "confuse_class": []}
+
         result_dict = {}
 
         for item in test_data:
@@ -32,7 +30,9 @@ class AccuracyCallback(keras.callbacks.Callback):
                 # print(unwraped_pred)
                 label = int(np.argmax(labels[index]))
                 if label not in result_dict:
-                    result_dict[label] = item_result_dict
+                    result_dict[label] = {"correct": 0,
+                                          "incorrect": 0,
+                                          "confuse_class": []}
 
                 if unwraped_pred == label:
                     result_dict[label]["correct"] += 1
@@ -41,8 +41,14 @@ class AccuracyCallback(keras.callbacks.Callback):
                     result_dict[label]["confuse_class"].append(unwraped_pred)
 
         for key, value in result_dict.items():
+            correct_count = value["correct"]
+            incorrect_count = value["incorrect"]
+
             acc = value["correct"] / (value["incorrect"] + value["correct"])
-            print("Accuracy {} of class {}".format(acc, key))
+            print("Accuracy {}, correct count {}, incorrect count {}, of class {}".format(acc,
+                                                                                          correct_count,
+                                                                                          incorrect_count,
+                                                                                          key))
 
 if __name__ == '__main__':
     task_type = TaskType.MULTICLASS_CLASSIFICATION

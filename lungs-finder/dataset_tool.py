@@ -16,10 +16,15 @@ class DatasetTool:
         if task_type == TaskType.BINARY_CLASSIFICATION:
             print("\n \n \n DatasetTool binary")
             self.equalize_binary_dataset()
+
+            ### TEMPORARY (SOURCE OF FUTURE BUGS)
             self.n_classes = 1
+            ### !
+
         elif task_type == TaskType.MULTICLASS_CLASSIFICATION:
             self.equalize_multiclass_dataset()
             self.n_classes = len(self.class_counts_dict.keys())
+            self.sorted_keys_list = list(sorted(self.class_counts_dict.keys()))
 
         self.divide_train_or_val(is_val)
 
@@ -110,17 +115,36 @@ class DatasetTool:
 
         class_counts_dict[class_id] = buff_dict
 
+    ### LABEL
+
+    def create_label_placeholder(self, batch_size):
+        if self.task_type == TaskType.BINARY_CLASSIFICATION or self.task_type == TaskType.MULTICLASS_CLASSIFICATION:
+            return np.zeros((batch_size, self.n_classes))
+
     def get_label(self, class_id):
-        if self.task_type is TaskType.BINARY_CLASSIFICATION:
-            print("VOVA!!")
+        if self.task_type == TaskType.BINARY_CLASSIFICATION:
+
+            ### temporary
             neg_class = 14
+            ###
+
             return int(class_id == neg_class)
 
-        elif self.task_type is TaskType.MULTICLASS_CLASSIFICATION:
-            class_index = list(sorted(self.class_counts_dict.keys())).index(class_id)
+        elif self.task_type == TaskType.MULTICLASS_CLASSIFICATION:
+            class_index = self.sorted_keys_list.index(class_id)
             zeros_arr = np.zeros(self.n_classes)
             zeros_arr[class_index] = 1
             return zeros_arr
+
+        def getYForID(self, id):
+            for index, row in self.pandas_data_frame.iterrows():
+                if row.image_id == id:
+                    class_id = row.class_id
+                    if class_id == 14:  # no findings
+                        return [[self.get_average_random_frame()], class_id]
+
+                    x, y, width, height = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
+                    return [x, y, width, height], class_id
 
 import os
 import pandas as pd

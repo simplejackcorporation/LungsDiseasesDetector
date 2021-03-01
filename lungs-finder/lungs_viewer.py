@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 import cv2
-import lungs_finder as lf
+import lungs_opencv_tools as lf
 
 from skimage import exposure
 from sklearn import preprocessing

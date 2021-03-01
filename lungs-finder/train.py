@@ -10,15 +10,6 @@ from model_builder import ModelBuilder
 from path_config import PNG_TRAIN_DATASET, TENSORBOARD_PATH, TaskType
 from dataset_tool import DatasetTool, TaskType
 
-
-def custom_loss(y_true, y_pred):
-    print("custom loss")
-    print("y_pred ", y_pred)
-
-    y_pred = K.print_tensor(y_pred)
-    return y_true - y_pred
-
-
 def train():
     print("GPU:", tf.test.is_gpu_available())
 
@@ -40,12 +31,8 @@ def train():
     model = model_builder.model()
 
     for index, layer in enumerate(model.layers):
-        last_train_layer = int(len(model.layers) - 5)
-
-        if index < last_train_layer:
-            layer.trainable = False
-        else:
-            layer.trainable = True
+        last_train_layer_index = int(len(model.layers) - 5)
+        layer.trainable = index > last_train_layer_index
 
     model.summary()
     print("len(model.layers) :", len(model.layers))
@@ -57,8 +44,7 @@ def train():
     }
 
     optimizer = keras.optimizers.RMSprop()
-    loss = model_builder.loss  # model_builder.loss # keras.losses.binary_crossentropy  # losses # custom_loss #
-    # loss = custom_loss
+    loss = model_builder.loss
 
     model.compile(
         optimizer=optimizer,

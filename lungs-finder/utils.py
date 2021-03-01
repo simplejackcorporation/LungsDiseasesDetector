@@ -1,6 +1,6 @@
 import cv2
 import pydicom
-import lungs_finder as lf
+import lungs_opencv_tools as lf
 import numpy as np
 
 from path_config import DICOM_TRAIN_DATASET
@@ -54,7 +54,7 @@ class Utils:
 
 
     @staticmethod
-    # DON"T WORK FOR DATA GENERATOR
+    # DOESN"T WORK FOR DATA GENERATOR
     def cropSepareteLungsImages(image):
         right_rect, left_rect = Utils.get_left_rignt_hog_predictions(image)
 
@@ -69,7 +69,7 @@ class Utils:
         return [right_lung_img, left_lung_img]
 
     @staticmethod
-    # DON"T WORK FOR DATA GENERATOR
+    # DOESN"T WORK FOR DATA GENERATOR
     def applyDeltas(rect, x_delta, y_delta):
         x, y, width, height = rect
 
@@ -88,7 +88,7 @@ class Utils:
         return x, y, width, height
 
     @staticmethod
-    # DON"T WORK FOR DATA GENERATOR
+    # DOESN"T WORK FOR DATA GENERATOR
     def cropLungsAreaImage(image, item_path=None):
         x_delta = 20
 
@@ -149,7 +149,6 @@ class Utils:
         return class_count_dict
 
 if __name__ == '__main__':
-    # L VOVA HERE C:\Users\m\Desktop\datasets\dicom_train\small_23f29659e174d2c4651857bf304a5d75.dicom.png
 
 
     name = "small_23f29659e174d2c4651857bf304a5d75.dicom.png"
