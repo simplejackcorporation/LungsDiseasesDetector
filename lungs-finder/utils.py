@@ -148,6 +148,70 @@ class Utils:
 
         return class_count_dict
 
+    @staticmethod
+    def choose_random_item(arr, except_item):
+        choosen_item = except_item
+
+        while choosen_item == except_item:
+            choosen_item = np.random.choice(arr)
+
+        return choosen_item
+
+    @staticmethod
+    def convert_xywh__to_x1y1x2y2(p_bb1):
+        bb1 = {}
+        bb1['x1'] = p_bb1[0]
+        bb1['y1'] = p_bb1[1]
+        bb1['x2'] = p_bb1[0] + p_bb1[1]
+        bb1['y2'] = p_bb1[0] + p_bb1[2]
+
+        return bb1
+
+    @staticmethod
+    def get_iou(p_bb1, p_bb2):
+
+        """
+        https://stackoverflow.com/questions/25349178/calculating-percentage-of-bounding-box-overlap-for-image-detector-evaluation
+            Input: x y w h
+            Keys: {'x1', 'x2', 'y1', 'y2'}
+
+            The (x, y) position is at the top left corner,
+            the (x2, y2) position is at the bottom right corner
+        """
+        bb1 = Utils.convert_xywh__to_x1y1x2y2(p_bb1)
+        bb2 = Utils.convert_xywh__to_x1y1x2y2(p_bb2)
+
+        # assert bb1['x1'] < bb1['x2']
+        # assert bb1['y1'] < bb1['y2']
+        # assert bb2['x1'] < bb2['x2']
+        # assert bb2['y1'] < bb2['y2']
+
+        # determine the coordinates of the intersection rectangle
+        x_left = max(bb1['x1'], bb2['x1'])
+        y_top = max(bb1['y1'], bb2['y1'])
+        x_right = min(bb1['x2'], bb2['x2'])
+        y_bottom = min(bb1['y2'], bb2['y2'])
+
+        if x_right < x_left or y_bottom < y_top:
+            return 0.0
+
+        # The intersection of two axis-aligned bounding boxes is always an
+        # axis-aligned bounding box
+        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+
+        # compute the area of both AABBs
+        bb1_area = (bb1['x2'] - bb1['x1']) * (bb1['y2'] - bb1['y1'])
+        bb2_area = (bb2['x2'] - bb2['x1']) * (bb2['y2'] - bb2['y1'])
+
+        # compute the intersection over union by taking the intersection
+        # area and dividing it by the sum of prediction + ground-truth
+        # areas - the interesection area
+        iou = intersection_area / float(bb1_area + bb2_area - intersection_area)
+        assert iou >= 0.0
+        assert iou <= 1.0
+        return iou
+
+
 if __name__ == '__main__':
 
 

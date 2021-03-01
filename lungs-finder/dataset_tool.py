@@ -1,5 +1,8 @@
 import numpy as np
 from path_config import PNG_TRAIN_DATASET, DICOM_TRAIN_DATASET, TaskType, N_PROPOSALS
+from utils import Utils
+
+EMPTY_CLASS_ID = 14
 
 class DatasetTool:
     def __init__(self,
@@ -23,6 +26,7 @@ class DatasetTool:
             self.equalize_multiclass_dataset()
 
         self.sorted_keys_list = list(sorted(self.class_counts_dict.keys()))
+        print("keys", self.sorted_keys_list)
         self.n_classes = len(self.class_counts_dict.keys())
         self.divide_train_or_val(is_val)
 
@@ -51,17 +55,15 @@ class DatasetTool:
 
 
     def equalize_binary_dataset(self):
-        negative_class_id = 14
-
         number_positive_img_ids = 0
         for key, item in self.class_counts_dict.items():
-            if key != negative_class_id:
+            if key != EMPTY_CLASS_ID:
                 number_positive_img_ids += len(item)
 
-        neg_class_img_keys = list(sorted(self.class_counts_dict[negative_class_id]))
+        neg_class_img_keys = list(sorted(self.class_counts_dict[EMPTY_CLASS_ID]))
 
         sliced_keys = neg_class_img_keys[0:number_positive_img_ids]
-        self.copy_slice_dict(sliced_keys, self.class_counts_dict, negative_class_id)
+        self.copy_slice_dict(sliced_keys, self.class_counts_dict, EMPTY_CLASS_ID)
 
     def equalize_multiclass_dataset(self):
         MIN_LIMIT = 100
@@ -124,45 +126,46 @@ class DatasetTool:
             return np.zeros((batch_size, 1))
 
         elif self.task_type == TaskType.MULTICLASS_CLASSIFICATION:
-            print("\n \n \n MULTICLASS_CLASSIFICATION")
-            print(self.n_classes)
             return np.zeros((batch_size, self.n_classes))
 
         elif self.task_type == TaskType.OBJECT_DETECTION:
-            return np.zeros((batch_size, N_PROPOSALS, 4 + self.n_classes))
+            return np.zeros((batch_size, N_PROPOSALS, 4 + 1 + self.n_classes)) # x y w h is_back one_hot length
 
     # img_id used JUST for object detection (rects retrieval)
     def get_label(self, class_id , img_id=None):
         if self.task_type == TaskType.BINARY_CLASSIFICATION:
-
-            ### temporary
-            neg_class = 14
-            ###
-            return int(class_id == neg_class)
+            return int(class_id == EMPTY_CLASS_ID)
 
         elif self.task_type == TaskType.MULTICLASS_CLASSIFICATION:
-            class_index = self.sorted_keys_list.index(class_id)
-            zerr_arr = np.zeros(self.n_classes)
-            zerr_arr[class_index] = 1
-            return zerr_arr
+            return self.one_hot_representation(class_id, self.sorted_keys_list)
 
         elif self.task_type == TaskType.OBJECT_DETECTION:
-            class_index = self.sorted_keys_list.index(class_id)
-            zerr_arr = np.zeros(self.n_classes)
-            zerr_arr[class_index] = 1
+            zerr_arr = self.one_hot_representation(class_id, self.sorted_keys_list)
             zerr_arr = zerr_arr.tolist()
-            label = [40, 40, 100, 100] + zerr_arr
+            rect = self.get_rect(class_id, img_id)
+            is_background = class_id == EMPTY_CLASS_ID
+            label = rect + [int(is_background)] + zerr_arr
             return label
 
-        # def getYForID(self, id):
-        #     for index, row in self.pandas_data_frame.iterrows():
-        #         if row.image_id == id:
-        #             class_id = row.class_id
-        #             if class_id == 14:  # no findings
-        #                 return [[self.get_average_random_frame()], class_id]
-        #
-        #             x, y, width, height = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
-        #             return [x, y, width, height], class_id
+    def one_hot_representation(self, class_id, sorted_keys_list):
+        class_index = sorted_keys_list.index(class_id)
+        zerr_arr = np.zeros(self.n_classes)
+        zerr_arr[class_index] = 1
+        return zerr_arr
+
+    #img id can have multiple class id
+    def get_rect(self, class_id, img_id):
+        if class_id == EMPTY_CLASS_ID:
+            class_id = Utils.choose_random_item(self.sorted_keys_list, EMPTY_CLASS_ID)
+            img_id = np.random.choice(list(self.class_counts_dict[class_id].keys()))
+
+        rects = self.class_counts_dict[class_id][img_id]
+        choosen_rect = list(rects[0])
+        rect = [int(x) for x in choosen_rect]
+        return rect
+
+
+
 
 import os
 import pandas as pd
@@ -173,11 +176,14 @@ if __name__ == '__main__':
     path = os.path.join(PNG_TRAIN_DATASET, "train")#os.path.join(BASE_PATH, r"dicom_train")
     task_type = TaskType.OBJECT_DETECTION
     dataset_tool = DatasetTool(path, task_type, is_val)
+    print("keys", dataset_tool.sorted_keys_list)
+
     count_sum = 0
     for key, value in dataset_tool.class_counts_dict.items():
+        print("KEY", key)
         count_sum += len(value)
-        for img_k, rects_value in value.items():
-            print(dataset_tool.get_label(img_k))
+        for img_k in list(value.keys()):
+            print(dataset_tool.get_label(key, img_k))
         print("key {}, count {}".format(key, len(value)))
 
     print(count_sum)

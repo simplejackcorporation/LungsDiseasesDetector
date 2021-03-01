@@ -7,33 +7,45 @@ from keras.losses import categorical_crossentropy, binary_crossentropy, mse
 from path_config import TaskType, N_PROPOSALS
 from keras.utils.generic_utils import get_custom_objects
 
+@tf.function
 def get_rects_and_class_tensors(x):
     n_proposals = N_PROPOSALS
     batch_size = tf.shape(x)[0] # needed for slice
     class_count = 3 # :( :( :( :(
     rects_res = tf.slice(x, [0, 0, 0], [batch_size, n_proposals, 4])
-    class_res = tf.slice(x, [0, 0, 4], [batch_size, n_proposals, class_count])
-    return rects_res, class_res
+
+    is_background_res = tf.slice(x, [0, 0, 4], [batch_size, n_proposals, 1])
+
+    # last_ind = class_count + 1 # + is background (emptry class can be removed in future)
+    one_hot_class_res = tf.slice(x, [0, 0, 5], [batch_size, n_proposals, class_count])
+
+    return rects_res, is_background_res, one_hot_class_res
 
 
+@tf.function
 def object_detection_activation(x):
-    rects_res, class_res = get_rects_and_class_tensors(x)
+    rects_res, is_background_res, one_hot_class_res = get_rects_and_class_tensors(x)
 
     activated_rects_res = keras.activations.linear(rects_res)
-    activated_class_res = keras.activations.softmax(class_res)
+    activated_is_background_res = keras.activations.sigmoid(is_background_res)
+    activated_one_hot_class_res = keras.activations.softmax(one_hot_class_res)
 
-    act_concated_res = tf.concat([activated_rects_res, activated_class_res], axis=2)
+    act_concated_res = tf.concat([activated_rects_res,
+                                  activated_is_background_res,
+                                  activated_one_hot_class_res], axis=2)
     return act_concated_res
 
 def object_detection_loss(y_true, y_pred):
-    true_rects_res, true_class_res = get_rects_and_class_tensors(y_true)
-    pred_rects_res, pred_class_res = get_rects_and_class_tensors(y_pred)
+    true_rects_res, true_is_background_res, true_one_hot_class_res = get_rects_and_class_tensors(y_true)
+    pred_rects_res, pred_is_background_res, pred_one_hot_class_res = get_rects_and_class_tensors(y_pred)
 
     MSE = mse(true_rects_res, pred_rects_res)
+    background_binary_entropy = binary_crossentropy(true_is_background_res, pred_is_background_res)
+    c_crossentropy = categorical_crossentropy(true_one_hot_class_res, pred_one_hot_class_res)
 
-    c_crossentropy = categorical_crossentropy(true_class_res, pred_class_res)
     #
-    total_loss = MSE + c_crossentropy
+    backround_coeff = 1.1 # a bit more imporatant to detect background/non-background
+    total_loss = MSE + c_crossentropy + backround_coeff * background_binary_entropy
 
     return total_loss
 
@@ -42,9 +54,8 @@ class ModelBuilder:
 
     def __init__(self,
                  task_type,
-                 n_classes = 3):
+                 n_classes):
 
-        print("\n \n ", task_type)
         self.task_type = task_type
         self.n_classes = n_classes
 
@@ -68,9 +79,13 @@ class ModelBuilder:
             model_head = Dense(self.n_classes, activation='softmax')(input)
 
         elif self.task_type == TaskType.OBJECT_DETECTION:
-            print("here")
-            model_head = Reshape((N_PROPOSALS, 5 + self.n_classes), name="RESHAPEEEE")(input)
-            model_head = Dense(5 + self.n_classes, activation=Activation(object_detection_activation))(model_head)
+            shape = 5 + self.n_classes + 1
+            print("\n \n shape", shape)
+            print("\n \n self.n_classes", self.n_classes)
+
+            model_head = Reshape((N_PROPOSALS, shape), name="RESHAPEEEE")(input)
+
+            model_head = Dense(shape,activation=Activation(object_detection_activation))(model_head)
 
         return model_head
 
@@ -97,28 +112,18 @@ class ModelBuilder:
         x = Dense(1024, activation='relu')(x)
         x = Dense(512, activation='relu')(x)
 
-        # x = Dense(25, activation='relu')(x)
+        x = Dense((N_PROPOSALS * (5 + self.n_classes + 1)), activation='relu')(x)
 
-        x = Dense(40, activation='relu')(x)
-
-        # class_x = Reshape((5,  4))(class_x)
-        #
-        # rect_x = Dense((5 * 4), activation='relu')(x)
-        # rect_x = Reshape((5,  4))(rect_x)
-
-        # rects_predictions = Dense(4, activation='linear', name="rect_output")(rect_x)
         class_predicions = self.model_head(x)
 
         model = keras.Model(inputs=base_model.input,
                             outputs=class_predicions)
-        #         model = keras.Model(inputs=base_model.input, outputs=[rects_predictions, class_predicions])
-        model.summary()
 
         return model
 
 if __name__ == '__main__':
     n_class = 3
-    model_builder = ModelBuilder(TaskType.OBJECT_DETECTION)
+    model_builder = ModelBuilder(TaskType.OBJECT_DETECTION, n_classes=n_class)
     model = model_builder.model()
     # model.summary()
     print(model.output.shape)

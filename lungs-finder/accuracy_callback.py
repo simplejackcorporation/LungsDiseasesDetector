@@ -11,8 +11,6 @@ class AccuracyCallback(keras.callbacks.Callback):
 
     def __init__(self, data_generator):
         self.data_generator = data_generator
-        self.task_type = self.data_generator.dataset_tool.task_type
-        self.n_classses = self.data_generator.dataset_tool.n_classes
 
     def on_epoch_end(self, epoch, logs=None):
         test_data = []
@@ -27,22 +25,15 @@ class AccuracyCallback(keras.callbacks.Callback):
             x_result = self.model.predict(item[0], verbose=0)
             labels = item[1]
             for index, pred in enumerate(x_result):
-                if self.task_type == TaskType.MULTICLASS_CLASSIFICATION:
-                    unwraped_pred = int(np.argmax(pred))
-                    # print(unwraped_pred)
-                    label = int(np.argmax(labels[index]))
-
-                # elif self.task_type == TaskType.OBJECT_DETECTION:
-                #     print("PREDSS")
-                #     print(pred)
-                #     unwraped_pred = int(np.argmax(pred))
-                #     # print(unwraped_pred)
-                #     label = int(np.argmax(labels[index]))
+                unwraped_pred = int(np.argmax(pred))
+                label = int(np.argmax(labels[index]))
 
                 if label not in result_dict:
                     result_dict[label] = {"correct": 0,
                                           "incorrect": 0,
                                           "confuse_class": []}
+
+
 
                 if unwraped_pred == label:
                     result_dict[label]["correct"] += 1
@@ -61,7 +52,7 @@ class AccuracyCallback(keras.callbacks.Callback):
                                                                                           key))
 
 if __name__ == '__main__':
-    task_type = TaskType.OBJECT_DETECTION
+    task_type = TaskType.MULTICLASS_CLASSIFICATION
     path = os.path.join(PNG_TRAIN_DATASET, "train")
 
     val_dataset_tool = DatasetTool(path, task_type, True)

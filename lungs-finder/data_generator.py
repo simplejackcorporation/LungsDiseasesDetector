@@ -32,7 +32,7 @@ class DataGenerator(keras.utils.Sequence):
             for img_id_key in value.keys():
                 img_name = "small_{}.png".format(img_id_key)
                 path = os.path.join(base_path, img_name)
-                self.items_paths.append((path, key))
+                self.items_paths.append((path, key, img_id_key))
 
         self.on_epoch_end()
 
@@ -47,7 +47,7 @@ class DataGenerator(keras.utils.Sequence):
 
         ind = 0
         while ind < self.batch_size:
-            item_path, class_id = batch_items_paths[ind]
+            item_path, class_id, img_id_key = batch_items_paths[ind]
 
             image = cv2.imread(item_path)
             try:
@@ -62,7 +62,7 @@ class DataGenerator(keras.utils.Sequence):
 
             X[ind] = image
 
-            label = self.dataset_tool.get_label(class_id)
+            label = self.dataset_tool.get_label(class_id, img_id_key)
             class_Y[ind] = label
 
             ind += 1

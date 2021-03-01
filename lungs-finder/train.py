@@ -19,14 +19,11 @@ def train():
     train_dataset_tool = DatasetTool(path, task_type, False)
     val_dataset_tool = DatasetTool(path, task_type, True)
 
-    n_classes = train_dataset_tool.n_classes if task_type == TaskType.MULTICLASS_CLASSIFICATION else None
-    print("n_classes" , n_classes)
-
     training_generator = DataGenerator(path, train_dataset_tool,  is_val=False, batch_size=BATCH_SIZE)
     validation_generator = DataGenerator(path, val_dataset_tool, is_val=True, batch_size=BATCH_SIZE)
 
     #MODEL
-    model_builder = ModelBuilder(task_type)
+    model_builder = ModelBuilder(task_type, n_classes = train_dataset_tool.n_classes)
     model = model_builder.model()
 
     for index, layer in enumerate(model.layers):
