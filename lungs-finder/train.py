@@ -50,16 +50,8 @@ def train():
         metrics=['accuracy'],
     )
 
-    checkpoint_filepath = '/checkpoints/checkpoint'
-    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=checkpoint_filepath,
-        save_weights_only=True,
-        monitor='val_accuracy',
-        mode='max',
-        save_best_only=True)
-
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir='./logs')
-    callbacks = [tensorboard_callback, model_checkpoint_callback]
+    callbacks = [tensorboard_callback]
 
     if task_type == TaskType.MULTICLASS_CLASSIFICATION:
         callback = AccuracyCallback(validation_generator)
