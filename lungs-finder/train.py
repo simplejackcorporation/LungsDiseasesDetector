@@ -1,8 +1,8 @@
 import os
+import time
 import keras
 import tensorflow as tf
 
-import keras.backend as K
 
 from accuracy_callback import AccuracyCallback
 from object_detection_acc_callback import ObjectDetectionAccCallback
@@ -63,11 +63,21 @@ def train():
 
     #TRAIN
     epochs = 25
+
     for epoch in range(epochs):
         print("\nStart of epoch %d" % (epoch,))
 
-        for step, (x_batch_train, y_batch_train) in enumerate(training_generator):
+        start_time = time.time()
+        start_epoch_time = time.time()
+        total_reading_time_per_epoch = 0
 
+        for step, (x_batch_train, y_batch_train) in enumerate(training_generator):
+            # cal_time = time.time()
+            data_gen_batch_reading_time = time.time() - start_time
+            # print("\nstart time ", start_time)
+            # print("cal_time ", cal_time)
+            # print("data_gen_batch_reading_time", data_gen_batch_reading_time)
+            total_reading_time_per_epoch += data_gen_batch_reading_time
             # Open a GradientTape to record the operations run
             # during the forward pass, which enables auto-differentiation.
             with tf.GradientTape() as tape:
@@ -82,11 +92,14 @@ def train():
                 else:
                     total_loss = model_builder.loss(y_batch_train, logits)
 
+
             grads = tape.gradient(total_loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
             # Log every 200 batches.
             if step % 10 == 0:
                 total_loss_mean = tf.math.reduce_mean(total_loss).numpy()
+                print("\nTraining total loss (for one batch) at step %d: %.4f" % (step, float(total_loss_mean)))
+                print("data_gen_batch_reading_time of previous step %.4f:" % data_gen_batch_reading_time)
 
                 if task_type == TaskType.OBJECT_DETECTION:
                     mse_loss_mean = tf.math.reduce_mean(mse_loss_value).numpy()
@@ -94,21 +107,25 @@ def train():
                     class_loss_mean = tf.math.reduce_mean(class_loss_value).numpy()
 
                     print(
-                        "Training total loss (for one batch) at step %d: %.4f  mse loss %.4f, background loss %.4f, class loss %.4f"
-                        % (step, float(total_loss_mean),
-                        float(mse_loss_mean),
-                        float(background_loss_mean),
-                        float(class_loss_mean))
-                    )
-                else:
-                    print(
-                        "Training total loss (for one batch) at step %d: %.4f  mse loss %.4f, background loss %.4f, class loss %.4f"
-                        % (step, float(total_loss_mean))
+                        "mse_loss_mean %.4f, background loss %.4f, class loss %.4f"
+                        % (float(mse_loss_mean), float(background_loss_mean),  float(class_loss_mean))
                     )
 
+            start_time = time.time()
+
+        start_callback_time = time.time()
         for p_callback in callbacks:
             p_callback.model = model
             p_callback.on_epoch_end(epoch)
+
+        callback_time = time.time() - start_callback_time
+        epoch_time = time.time() - start_epoch_time
+        print("\n !!!EPOCH FINISHED!!!\n epoch_time %.4f, data reading time %.4f, callback time %.4f" % (epoch_time,
+                                                                               total_reading_time_per_epoch,
+                                                                               callback_time))
+
+
+
 
 if __name__ == '__main__':
     train()
