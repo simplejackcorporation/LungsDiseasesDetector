@@ -21,12 +21,26 @@ def get_rects_and_class_tensors(x):
 
     return rects_res, is_background_res, one_hot_class_res
 
+# def object_detection_loss(y_true, y_pred):
+#     true_rects_res, true_is_background_res, true_one_hot_class_res = get_rects_and_class_tensors(y_true)
+#     pred_rects_res, pred_is_background_res, pred_one_hot_class_res = get_rects_and_class_tensors(y_pred)
+#
+#     MSE = mse(true_rects_res, pred_rects_res)
+#     background_binary_entropy = binary_crossentropy(true_is_background_res, pred_is_background_res)
+#     c_crossentropy = categorical_crossentropy(true_one_hot_class_res, pred_one_hot_class_res)
+#
+#     #
+#     backround_coeff = 1.1 # a bit more imporatant to detect background/non-background
+#     total_loss = MSE + c_crossentropy + backround_coeff * background_binary_entropy
+#
+#     return total_loss
+
 
 @tf.function
 def object_detection_activation(x):
     rects_res, is_background_res, one_hot_class_res = get_rects_and_class_tensors(x)
 
-    activated_rects_res = keras.activations.linear(rects_res)
+    activated_rects_res = keras.activations.relu(rects_res)
     activated_is_background_res = keras.activations.sigmoid(is_background_res)
     activated_one_hot_class_res = keras.activations.softmax(one_hot_class_res)
 
@@ -35,20 +49,24 @@ def object_detection_activation(x):
                                   activated_one_hot_class_res], axis=2)
     return act_concated_res
 
-def object_detection_loss(y_true, y_pred):
-    true_rects_res, true_is_background_res, true_one_hot_class_res = get_rects_and_class_tensors(y_true)
-    pred_rects_res, pred_is_background_res, pred_one_hot_class_res = get_rects_and_class_tensors(y_pred)
 
-    MSE = mse(true_rects_res, pred_rects_res)
-    background_binary_entropy = binary_crossentropy(true_is_background_res, pred_is_background_res)
-    c_crossentropy = categorical_crossentropy(true_one_hot_class_res, pred_one_hot_class_res)
+def mseloss(y_true, y_pred):
+    true_rects_res, _, _ = get_rects_and_class_tensors(y_true)
+    pred_rects_res, _, _ = get_rects_and_class_tensors(y_pred)
 
-    #
-    backround_coeff = 1.1 # a bit more imporatant to detect background/non-background
-    total_loss = MSE + c_crossentropy + backround_coeff * background_binary_entropy
+    return mse(true_rects_res, pred_rects_res)
 
-    return total_loss
+def backgroundloss(y_true, y_pred):
+    _, true_is_background_res, _ = get_rects_and_class_tensors(y_true)
+    _, pred_is_background_res, _ = get_rects_and_class_tensors(y_pred)
 
+    return binary_crossentropy(true_is_background_res, pred_is_background_res)
+
+def classloss(y_true, y_pred):
+    _, _, true_one_hot_class_res = get_rects_and_class_tensors(y_true)
+    _, _, pred_one_hot_class_res = get_rects_and_class_tensors(y_pred)
+
+    return categorical_crossentropy(true_one_hot_class_res, pred_one_hot_class_res)
 
 class ModelBuilder:
 
@@ -65,8 +83,8 @@ class ModelBuilder:
         elif task_type == TaskType.MULTICLASS_CLASSIFICATION:
             self.loss = categorical_crossentropy
 
-        elif task_type == TaskType.OBJECT_DETECTION:
-            self.loss = object_detection_loss
+        # elif task_type == TaskType.OBJECT_DETECTION:
+        #     self.loss = object_detection_loss
 
 
     def model_head(self, input):

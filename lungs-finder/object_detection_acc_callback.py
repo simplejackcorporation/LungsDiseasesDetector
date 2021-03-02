@@ -1,4 +1,4 @@
-# your class labels
+
 import keras
 import os
 from model_builder import ModelBuilder
@@ -7,7 +7,7 @@ from dataset_tool import DatasetTool
 from data_generator import DataGenerator
 from utils import Utils
 
-class AccuracyCallback(keras.callbacks.Callback):
+class ObjectDetectionAccCallback(keras.callbacks.Callback):
 
     def __init__(self, data_generator):
         self.data_generator = data_generator
@@ -33,11 +33,13 @@ class AccuracyCallback(keras.callbacks.Callback):
                 is_background_labels = current_labels[:, 4:5]
                 class_labels = current_labels[:, 5:]
 
+                ious = []
                 for index, rect_pred in enumerate(rects_preds):
                     rect_label = rects_labels[index]
-                    iou = Utils.get_iou(rect_pred, rect_label)
-                    print(iou)
-
+                    iou = Utils.iou(rect_label, rect_pred)
+                    ious.append(iou)
+        ious_mean = sum(ious) / len(ious)
+        print("IOU's mean : {} at epoch {}".format(ious_mean, epoch))
 
 
 
@@ -54,6 +56,6 @@ if __name__ == '__main__':
     model_builder = ModelBuilder(task_type,
                                  n_classes)
 
-    callback = AccuracyCallback(validation_generator)
+    callback = ObjectDetectionAccCallback(validation_generator)
     callback.model = model_builder.model()
     callback.on_epoch_end(epoch=2)

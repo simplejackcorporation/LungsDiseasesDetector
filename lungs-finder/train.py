@@ -5,8 +5,10 @@ import tensorflow as tf
 import keras.backend as K
 
 from accuracy_callback import AccuracyCallback
+from object_detection_acc_callback import ObjectDetectionAccCallback
+
 from data_generator import DataGenerator
-from model_builder import ModelBuilder
+from model_builder import ModelBuilder, mseloss, backgroundloss, classloss
 from path_config import PNG_TRAIN_DATASET, TENSORBOARD_PATH, TaskType, BATCH_SIZE
 from dataset_tool import DatasetTool, TaskType
 
@@ -19,33 +21,33 @@ def train():
     train_dataset_tool = DatasetTool(path, task_type, False)
     val_dataset_tool = DatasetTool(path, task_type, True)
 
-    training_generator = DataGenerator(path, train_dataset_tool,  is_val=False, batch_size=BATCH_SIZE)
-    validation_generator = DataGenerator(path, val_dataset_tool, is_val=True, batch_size=BATCH_SIZE)
+    training_generator = DataGenerator(path,
+                                       train_dataset_tool,
+                                       is_val=False,
+                                       batch_size=BATCH_SIZE)
+
+    validation_generator = DataGenerator(path,
+                                         val_dataset_tool,
+                                         is_val=True,
+                                         batch_size=BATCH_SIZE)
 
     #MODEL
-    model_builder = ModelBuilder(task_type, n_classes = train_dataset_tool.n_classes)
+    model_builder = ModelBuilder(task_type,
+                                 n_classes=train_dataset_tool.n_classes)
     model = model_builder.model()
 
     for index, layer in enumerate(model.layers):
-        last_train_layer_index = int(len(model.layers) - 5)
-        layer.trainable = index > last_train_layer_index
+        last_train_layer_index = int(len(model.layers) - 15)
+        layer.trainable =  True #index > last_train_layer_index
 
     model.summary()
     print("len(model.layers) :", len(model.layers))
 
     optimizer = keras.optimizers.RMSprop()
-    loss = model_builder.loss
 
     model.compile(
         optimizer=optimizer,
-        loss=loss,
         metrics=['accuracy'],
-
-        # loss_weights=None,
-        # weighted_metrics=None,
-        # run_eagerly=None,
-        # steps_per_execution=None,
-    # **kwargs	Arguments supported for backwards compatibility only.
     )
 
     checkpoint_filepath = r'C:\Users\m\Desktop\LUNGS\lungs-finder\weights'
@@ -55,27 +57,58 @@ def train():
     if task_type == TaskType.MULTICLASS_CLASSIFICATION:
         callback = AccuracyCallback(validation_generator)
         callbacks.append(callback)
-    # model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
-    #     filepath=checkpoint_filepath,
-    #     save_weights_only=True,
-    #     monitor='val_accuracy',
-    #     mode='max',
-    #     save_best_only=True,
-    #     callbacks=[tensorboard_callback])
+    elif task_type == TaskType.OBJECT_DETECTION:
+        callback = ObjectDetectionAccCallback(validation_generator)
+        callbacks.append(callback)
 
     #TRAIN
-    model.fit(training_generator,
-              validation_data=None if task_type == TaskType.MULTICLASS_CLASSIFICATION else validation_generator,
-              callbacks=callbacks,
-              epochs=10,
-              use_multiprocessing=True)
+    epochs = 25
+    for epoch in range(epochs):
+        print("\nStart of epoch %d" % (epoch,))
 
-    # model.fit_generator(generator=training_generator,
-    #                     # validation_data=,
-    #                     epochs=15,
-    #                     callbacks=callbacks,
-    #                     workers=6,
-    #                     use_multiprocessing=True)
+        for step, (x_batch_train, y_batch_train) in enumerate(training_generator):
+
+            # Open a GradientTape to record the operations run
+            # during the forward pass, which enables auto-differentiation.
+            with tf.GradientTape() as tape:
+
+                logits = model(x_batch_train, training=True)  # Logits for this minibatch
+
+                if task_type == TaskType.OBJECT_DETECTION:
+                    mse_loss_value = mseloss(y_batch_train, logits)
+                    background_loss_value = backgroundloss(y_batch_train, logits)
+                    class_loss_value = classloss(y_batch_train, logits)
+                    total_loss = mse_loss_value + background_loss_value + class_loss_value
+                else:
+                    total_loss = model_builder.loss(y_batch_train, logits)
+
+            grads = tape.gradient(total_loss, model.trainable_weights)
+            optimizer.apply_gradients(zip(grads, model.trainable_weights))
+            # Log every 200 batches.
+            if step % 10 == 0:
+                total_loss_mean = tf.math.reduce_mean(total_loss).numpy()
+
+                if task_type == TaskType.OBJECT_DETECTION:
+                    mse_loss_mean = tf.math.reduce_mean(mse_loss_value).numpy()
+                    background_loss_mean = tf.math.reduce_mean(background_loss_value).numpy()
+                    class_loss_mean = tf.math.reduce_mean(class_loss_value).numpy()
+
+                    print(
+                        "Training total loss (for one batch) at step %d: %.4f  mse loss %.4f, background loss %.4f, class loss %.4f"
+                        % (step, float(total_loss_mean),
+                        float(mse_loss_mean),
+                        float(background_loss_mean),
+                        float(class_loss_mean))
+                    )
+                else:
+                    print(
+                        "Training total loss (for one batch) at step %d: %.4f  mse loss %.4f, background loss %.4f, class loss %.4f"
+                        % (step, float(total_loss_mean))
+                    )
+
+        for p_callback in callbacks:
+            p_callback.model = model
+            p_callback.on_epoch_end(epoch)
 
 if __name__ == '__main__':
     train()

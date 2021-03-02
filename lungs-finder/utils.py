@@ -158,63 +158,59 @@ class Utils:
         return choosen_item
 
     @staticmethod
-    def convert_xywh__to_x1y1x2y2(p_bb1):
-        bb1 = {}
-        bb1['x1'] = p_bb1[0]
-        bb1['y1'] = p_bb1[1]
-        bb1['x2'] = p_bb1[0] + p_bb1[1]
-        bb1['y2'] = p_bb1[0] + p_bb1[2]
+    def get_intersection_side(t_x, p_x, t_side, p_side):
+        if t_x < p_x:
+            min_v = t_x
+            side = t_side
+            max_v = p_x
+        else:
+            min_v = p_x
+            side = p_side
+            max_v = t_x
 
-        return bb1
+        inter_side = min_v + side - max_v
+
+        # print("min_v : {}, side: {}, max_v: {},  inter_side: {}".format(min_v, side, max_v, inter_side))
+        return max(0, inter_side)
 
     @staticmethod
-    def get_iou(p_bb1, p_bb2):
+    def iou(true_box, predicted_box):
 
-        """
-        https://stackoverflow.com/questions/25349178/calculating-percentage-of-bounding-box-overlap-for-image-detector-evaluation
-            Input: x y w h
-            Keys: {'x1', 'x2', 'y1', 'y2'}
+        t_x, t_y, t_w, t_h = true_box[0], true_box[1], true_box[2], true_box[3]
+        p_x, p_y, p_w, p_h = predicted_box[0], predicted_box[1], predicted_box[2], predicted_box[3]
 
-            The (x, y) position is at the top left corner,
-            the (x2, y2) position is at the bottom right corner
-        """
-        bb1 = Utils.convert_xywh__to_x1y1x2y2(p_bb1)
-        bb2 = Utils.convert_xywh__to_x1y1x2y2(p_bb2)
+        inter_width = Utils.get_intersection_side(t_x, p_x, t_w, p_w)
+        inter_height = Utils.get_intersection_side(t_y, p_y, t_h, p_h)
 
-        # assert bb1['x1'] < bb1['x2']
-        # assert bb1['y1'] < bb1['y2']
-        # assert bb2['x1'] < bb2['x2']
-        # assert bb2['y1'] < bb2['y2']
+        intersection_area = inter_width * inter_height
 
-        # determine the coordinates of the intersection rectangle
-        x_left = max(bb1['x1'], bb2['x1'])
-        y_top = max(bb1['y1'], bb2['y1'])
-        x_right = min(bb1['x2'], bb2['x2'])
-        y_bottom = min(bb1['y2'], bb2['y2'])
+        iou = 0
+        if intersection_area > 0:
+            t_box_area = t_w * t_h
+            p_box_area = p_w * p_h
 
-        if x_right < x_left or y_bottom < y_top:
-            return 0.0
+            union_area = t_box_area + p_box_area - intersection_area
+            iou = intersection_area / union_area
 
-        # The intersection of two axis-aligned bounding boxes is always an
-        # axis-aligned bounding box
-        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+        #     print("t_box_area", t_box_area)
+        #     print("p_box_area", p_box_area)
+        #     print("p_box_area", union_area)
+        #
+        # print("intersection_area", intersection_area)
+        # print("IOU {} , intersection_area {}".format(IOU, intersection_area))
 
-        # compute the area of both AABBs
-        bb1_area = (bb1['x2'] - bb1['x1']) * (bb1['y2'] - bb1['y1'])
-        bb2_area = (bb2['x2'] - bb2['x1']) * (bb2['y2'] - bb2['y1'])
-
-        # compute the intersection over union by taking the intersection
-        # area and dividing it by the sum of prediction + ground-truth
-        # areas - the interesection area
-        iou = intersection_area / float(bb1_area + bb2_area - intersection_area)
-        assert iou >= 0.0
-        assert iou <= 1.0
         return iou
 
 
-if __name__ == '__main__':
+def IOU_test():
+    box1 = [20, 25, 35, 10]
+    box2 = [20, 25, 30, 10]
+
+    iou = Utils.IOU(box1, box2)
+    print(iou)
 
 
+def test_CropSepareteLungsImages():
     name = "small_23f29659e174d2c4651857bf304a5d75.dicom.png"
     path = DICOM_TRAIN_DATASET + "\\" + name
     image = cv2.imread(path)
@@ -229,3 +225,6 @@ if __name__ == '__main__':
         cv2.imshow("test", right)
 
     cv2.waitKey(0)
+
+if __name__ == '__main__':
+    IOU_test()
