@@ -50,9 +50,16 @@ def train():
         metrics=['accuracy'],
     )
 
-    checkpoint_filepath = r'C:\Users\m\Desktop\LUNGS\lungs-finder\weights'
+    checkpoint_filepath = '/checkpoints/checkpoint'
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        save_weights_only=True,
+        monitor='val_accuracy',
+        mode='max',
+        save_best_only=True)
+
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir='./logs')
-    callbacks = [tensorboard_callback]
+    callbacks = [tensorboard_callback, model_checkpoint_callback]
 
     if task_type == TaskType.MULTICLASS_CLASSIFICATION:
         callback = AccuracyCallback(validation_generator)
@@ -64,6 +71,9 @@ def train():
     #TRAIN
     epochs = 25
 
+    mse_means = []
+    previous_mse_value = 0
+
     for epoch in range(epochs):
         print("\nStart of epoch %d" % (epoch,))
 
@@ -72,12 +82,9 @@ def train():
         total_reading_time_per_epoch = 0
 
         for step, (x_batch_train, y_batch_train) in enumerate(training_generator):
-            # cal_time = time.time()
             data_gen_batch_reading_time = time.time() - start_time
-            # print("\nstart time ", start_time)
-            # print("cal_time ", cal_time)
-            # print("data_gen_batch_reading_time", data_gen_batch_reading_time)
             total_reading_time_per_epoch += data_gen_batch_reading_time
+
             # Open a GradientTape to record the operations run
             # during the forward pass, which enables auto-differentiation.
             with tf.GradientTape() as tape:
@@ -103,6 +110,10 @@ def train():
 
                 if task_type == TaskType.OBJECT_DETECTION:
                     mse_loss_mean = tf.math.reduce_mean(mse_loss_value).numpy()
+                    if previous_mse_value == 0:
+                        previous_mse_value = mse_loss_mean
+
+                    mse_means.append(mse_loss_mean)
                     background_loss_mean = tf.math.reduce_mean(background_loss_value).numpy()
                     class_loss_mean = tf.math.reduce_mean(class_loss_value).numpy()
 
@@ -118,8 +129,18 @@ def train():
             p_callback.model = model
             p_callback.on_epoch_end(epoch)
 
+        av_mse_mean = sum(mse_means) / len(mse_means)
+        if av_mse_mean < previous_mse_value:
+            print("SAVE previous_mse_value {}, av_mse_mean {}".format(previous_mse_value, av_mse_mean))
+
+            previous_mse_value = av_mse_mean
+            checkpoint_path = "training_2/cp-{epoch:04d}.ckpt"
+
+            model.save_weights(checkpoint_path.format(epoch=epoch))
+
         callback_time = time.time() - start_callback_time
         epoch_time = time.time() - start_epoch_time
+
         print("\n !!!EPOCH FINISHED!!!\n epoch_time %.4f, data reading time %.4f, callback time %.4f" % (epoch_time,
                                                                                total_reading_time_per_epoch,
                                                                                callback_time))
