@@ -6,7 +6,7 @@ import cv2
 
 from dataset_tool import DatasetTool, TaskType
 
-from path_config import PNG_TRAIN_DATASET, DICOM_TRAIN_DATASET
+from path_config import PNG_TRAIN_DATASET, DICOM_TRAIN_DATASET, BATCH_SIZE
 from utils import Utils
 import time
 from model_builder import ModelBuilder
@@ -19,13 +19,19 @@ if __name__ == '__main__':
     task_type = TaskType.OBJECT_DETECTION
     dataset_tool = DatasetTool(path, task_type, is_val)
 
-    data_generator = DataGenerator(path, dataset_tool,
-                                   is_val=is_val)
+    data_generator = DataGenerator(path,
+                                       dataset_tool,
+                                       is_val=False,
+                                       batch_size=BATCH_SIZE)
 
-    model_builder = ModelBuilder(task_type)
-    model = model_builder.model()
+    model_builder = ModelBuilder(task_type, n_classes=dataset_tool.n_classes)
+    model = model_builder.yolo_like_model()
+    print("input shape", model.input.shape)
+
     start_time = time.time()
     item = data_generator[0]
-    predictions = model.predict(item)
+    print("item shape", item[0].shape)
+
+    predictions = model.predict(item[0])
     print(predictions.shape)
     print(item[1].shape)

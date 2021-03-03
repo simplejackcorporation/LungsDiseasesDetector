@@ -38,10 +38,10 @@ def train():
     model = model_builder.yolo_like_model()
 
     for index, layer in enumerate(model.layers):
-        last_train_layer_index = int(len(model.layers) - 15)
-        layer.trainable =  True #index > last_train_layer_index
+        # last_train_layer_index = int(len(model.layers) - 15)
+        layer.trainable = True #index > last_train_layer_index
 
-    model.summary()
+    # model.summary()
     print("len(model.layers) :", len(model.layers))
 
     optimizer = keras.optimizers.RMSprop()
