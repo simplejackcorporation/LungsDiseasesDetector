@@ -34,7 +34,8 @@ def train():
     #MODEL
     model_builder = ModelBuilder(task_type,
                                  n_classes=train_dataset_tool.n_classes)
-    model = model_builder.model()
+
+    model = model_builder.yolo_like_model()
 
     for index, layer in enumerate(model.layers):
         last_train_layer_index = int(len(model.layers) - 15)
