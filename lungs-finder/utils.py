@@ -131,7 +131,7 @@ class Utils:
         for ind, row in p_data_frame.iterrows():
             class_id = row.class_id
             image_id = row.image_id
-  
+
             rect = row.x_min, row.y_min, row.x_max - row.x_min, row.y_max - row.y_min
 
             if class_id not in class_count_dict:
@@ -158,55 +158,31 @@ class Utils:
         return choosen_item
 
     @staticmethod
-    def get_intersection_side(t_x, p_x, t_side, p_side):
-        if t_x < p_x:
-            min_v = t_x
-            side = t_side
-            max_v = p_x
-        else:
-            min_v = p_x
-            side = p_side
-            max_v = t_x
-
-        inter_side = min_v + side - max_v
-
-        # print("min_v : {}, side: {}, max_v: {},  inter_side: {}".format(min_v, side, max_v, inter_side))
-        return max(0, inter_side)
+    def get_intersection_area(t_x, t_y, t_w, t_h,
+                              p_x, p_y, p_w, p_h):
+        inter_width = min(t_x + t_w, p_x + p_w) - max(t_x, p_x)
+        inter_height = min(t_y + t_h, p_y + p_h) - max(t_y, p_y)
+        return max(0, inter_height) * max(0, inter_width)
 
     @staticmethod
     def iou(true_box, predicted_box):
+        """
+        Receives boxes in format (x,y, width, height) and return IoU
+        """
 
-        t_x, t_y, t_w, t_h = true_box[0], true_box[1], true_box[2], true_box[3]
-        p_x, p_y, p_w, p_h = predicted_box[0], predicted_box[1], predicted_box[2], predicted_box[3]
+        intersection_area = Utils.get_intersection_area(*true_box,
+                                                        *predicted_box)
 
-        inter_width = Utils.get_intersection_side(t_x, p_x, t_w, p_w)
-        inter_height = Utils.get_intersection_side(t_y, p_y, t_h, p_h)
+        def area(box): return box[2] * box[3]
 
-        intersection_area = inter_width * inter_height
-
-        iou = 0
-        if intersection_area > 0:
-            t_box_area = t_w * t_h
-            p_box_area = p_w * p_h
-
-            union_area = t_box_area + p_box_area - intersection_area
-            iou = intersection_area / union_area
-
-        #     print("t_box_area", t_box_area)
-        #     print("p_box_area", p_box_area)
-        #     print("p_box_area", union_area)
-        #
-        # print("intersection_area", intersection_area)
-        # print("IOU {} , intersection_area {}".format(IOU, intersection_area))
-
-        return iou
+        return intersection_area / (area(true_box) + area(predicted_box) - intersection_area)
 
 
 def IOU_test():
     box1 = [20, 25, 35, 10]
     box2 = [20, 25, 30, 10]
 
-    iou = Utils.IOU(box1, box2)
+    iou = Utils.iou(box1, box2)
     print(iou)
 
 
@@ -225,6 +201,7 @@ def test_CropSepareteLungsImages():
         cv2.imshow("test", right)
 
     cv2.waitKey(0)
+
 
 if __name__ == '__main__':
     IOU_test()
