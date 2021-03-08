@@ -56,53 +56,117 @@ def object_detection_activation(x):
     rects_res, is_background_res, one_hot_class_res = get_rects_and_class_tensors(x)
 
     activated_rects_res = keras.activations.relu(rects_res)
+    print("\n \n activated_rects_res shape", activated_rects_res.shape)
     activated_is_background_res = keras.activations.sigmoid(is_background_res)
     activated_one_hot_class_res = keras.activations.softmax(one_hot_class_res)
 
     act_concated_res = tf.concat([activated_rects_res,
                                   activated_is_background_res,
                                   activated_one_hot_class_res], axis=2)
+
+
+    print("\n \n act_concated_res", activated_rects_res.shape)
+
     return act_concated_res
 
-class YoloLikeModel():
+
+output_len = (CELL_SIDE ** 2) * (CELLS_COUNT ** 2)
+
+class ImageGridOneCellLayer(keras.layers.Layer):
+    def __init__(self, shape):
+        super(ImageGridOneCellLayer, self).__init__()
+        self.dense1 = Dense((N_PROPOSALS * shape))
+        self.dense2 = Reshape((N_PROPOSALS, shape))
+
+    def call(self, inputs):
+        x = self.dense1(inputs)
+        return self.dense2(x)
+
+class ImageGridLayer(keras.layers.Layer):
+    @staticmethod
+    def slice(input):
+        slices = []
+        for item_ind in range(0, output_len):
+            if item_ind % CELL_AREA == 0:
+                slice_x = tf.slice(input, [0, item_ind], [BATCH_SIZE, CELL_AREA])
+                slices.append(slice_x)
+
+                # print(item_ind)
+                # print(item_ind + CELL_AREA)
+                # print("slice x shape", slice_x.shape)
+
+        return slices
 
     def __init__(self):
-        newInput = Input(batch_shape=(BATCH_SIZE, 224, 224, 3))  # let us say this new InputLayer
-        base_model = keras.applications.MobileNetV2(
+        super(ImageGridLayer, self).__init__()
+        input_l = tf.Variable(tf.zeros((BATCH_SIZE, output_len)))
+        print("input_l shape", input_l.shape)
+        slices = ImageGridLayer.slice(input_l)
+
+        self.cells = []
+        for index, slice in enumerate(slices):
+            n_classes = 3
+            shape = 5 + n_classes + 1
+            one_cell_l = ImageGridOneCellLayer(shape=shape)
+            self.cells.append(one_cell_l)
+
+    def call(self, inputs):
+        # input_l = tf.Variable(tf.zeros(BATCH_SIZE, output_len * (CELL_SIDE ** 2)))
+        # print("Variable" , input_l.shape)
+
+        slices = ImageGridLayer.slice(inputs)
+        print("slices" , slices)
+
+        preds = []
+        for index, slice in enumerate(slices):
+            pred = self.cells[index](slice)
+            # print("PRED", pred)
+            preds.append(pred)
+
+        # print("preds", len(preds))
+        # print("preds[0].shape", preds[0].shape)
+        preds = tf.reshape(preds, (10, 64, 5, 9), name=None)
+        # print("reshaped", reshaped)
+
+
+        return preds
+
+class YoloLikeModel(keras.Model):
+    def __init__(self):
+        super(YoloLikeModel, self).__init__()
+
+        # self.input_l = Input(batch_shape=(BATCH_SIZE, 224, 224, 3))  # let us say this new InputLayer
+        self.base_model = keras.applications.MobileNetV2(
             input_shape=(224, 224, 3),
             # alpha=1.0,
             include_top=False,
             weights="imagenet",
         )
         # base_model.summary()
-        model = base_model(newInput)
-        newModel = keras.Model(newInput, model)
+        # model = base_model(self.input_l)
+        # newModel = keras.Model(base_model.input, model)
 
-        x = newModel.output
-        x = GlobalAveragePooling2D()(x)
-        x = Flatten()(x)
-        x = Dense(1024, activation="relu")(x)
+        self.pooling_l = GlobalAveragePooling2D()
+        self.flatten = Flatten()
+        self.dense = Dense(1024, activation="relu")
 
         output_len = (CELL_SIDE ** 2) * (CELLS_COUNT ** 2)
-        x = Dense(output_len, activation="relu")(x)
+        self.dense2 = Dense(output_len, activation="relu")
+        self.image_grid_layer = ImageGridLayer()
 
-        denses = []
-        for item_ind in range(0, output_len):
-            if item_ind % (CELL_SIDE ** 2) == 0:
-                start_ind = item_ind + (CELL_SIDE ** 2)
-                slice_x = tf.slice(x, [0, start_ind], [BATCH_SIZE, start_ind + CELL_AREA])
-                n_classes = 3
-                shape = 5 + n_classes + 1
-
-                dense_l = Dense((N_PROPOSALS * shape))(slice_x)
-                dense_l = Reshape((N_PROPOSALS, shape))(dense_l)
-                dense_l = Dense(shape, activation=Activation(object_detection_activation),
-                                name="Dense_{}".format(item_ind))(dense_l)
-
-                denses.append(dense_l)
-
-        print("len(denses)", len(denses))
-        conc_l = keras.layers.Concatenate()(denses)
-        model = keras.Model(newInput, conc_l)
+        # self.output_l = keras.layers.Concatenate()
+        # self.output_l = conc_l
+        # self.model = keras.Model(base_model.input, conc_l)
         print("VOVA")
-        self.model = model
+        # self.model = model
+
+    def call(self, inputs):
+        x = self.base_model(inputs)
+        x = self.pooling_l(x)
+        x = self.flatten(x)
+        x = self.dense(x)
+        x = self.dense2(x)
+        x = self.image_grid_layer(x)
+        return x#keras.layers.Concatenate()(x)
+
+

@@ -26,7 +26,10 @@ if __name__ == '__main__':
 
     model_builder = ModelBuilder(task_type, n_classes=dataset_tool.n_classes)
     model = model_builder.yolo_like_model()
-    print("input shape", model.input.shape)
+    # model.build(input_shape = (BATCH_SIZE, 224, 224, 3 ))
+    # model.summary()
+    # print("input shape", model.input.shape)
+    # print("output shape", model.output.shape)
 
     start_time = time.time()
     item = data_generator[0]

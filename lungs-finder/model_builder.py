@@ -85,7 +85,7 @@ class ModelBuilder:
         return model_head
 
     def yolo_like_model(self):
-        return YoloLikeModel().model
+        return YoloLikeModel()
 
     def model(self):
         # MODEL
