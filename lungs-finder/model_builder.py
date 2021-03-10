@@ -4,45 +4,18 @@ import tensorflow as tf
 from keras.layers import GlobalAveragePooling2D, Dense, Flatten, Reshape, Activation, Input
 from keras.losses import categorical_crossentropy, binary_crossentropy, mse
 from path_config import TaskType, N_PROPOSALS, BATCH_SIZE, CELL_SIDE, CELLS_COUNT
-from yolo_like_model import YoloLikeModel, get_rects_and_class_tensors, get_rects_and_class_tensors2
+from yolo_like_model import YoloLikeModel
 
 CELL_AREA = CELL_SIDE ** 2
 
-def mseloss(y_true, y_pred):
-    print("\n MSE LOSS")
-    print("y_true", y_true)
-    print("y_pred", y_pred)
+def mse_loss(y_true, y_pred):
+    return YoloLikeModel.mse_loss(y_true, y_pred)
 
-    true_rects_res, _, _ = get_rects_and_class_tensors2(y_true)
-    pred_rects_res, _, _ = get_rects_and_class_tensors2(y_pred)
-    print("true_rects_res", true_rects_res.shape)
-    print("pred_rects_res", pred_rects_res.shape)
+def background_loss(y_true, y_pred):
+    return YoloLikeModel.background_loss(y_true, y_pred)
 
-    coordinates = tf.keras.activations.tanh(pred_rects_res[:, :, 0:2])
-
-    coordinates = tf.math.add(coordinates, CELL_SIDE)
-    sides = tf.math.scalar_mul(CELL_SIDE, tf.exp(pred_rects_res[:, :, 2:4]))
-    pred_concated_res = tf.concat([coordinates,
-                                  sides], axis=2)
-
-    return mse(true_rects_res, pred_concated_res)
-
-
-def backgroundloss(y_true, y_pred):
-    print("backgroundloss")
-    _, true_is_background_res, _ = get_rects_and_class_tensors(y_true)
-    _, pred_is_background_res, _ = get_rects_and_class_tensors(y_pred)
-
-    return binary_crossentropy(true_is_background_res, pred_is_background_res)
-
-
-def classloss(y_true, y_pred):
-    print("classloss")
-
-    _, _, true_one_hot_class_res = get_rects_and_class_tensors(y_true)
-    _, _, pred_one_hot_class_res = get_rects_and_class_tensors(y_pred)
-
-    return categorical_crossentropy(true_one_hot_class_res, pred_one_hot_class_res)
+def class_loss(y_true, y_pred):
+    return YoloLikeModel.class_loss(y_true, y_pred)
 
 class ModelBuilder:
 

@@ -3,12 +3,11 @@ import time
 import keras
 import tensorflow as tf
 
-
 from accuracy_callback import AccuracyCallback
 from object_detection_acc_callback import ObjectDetectionAccCallback
 
 from data_generator import DataGenerator
-from model_builder import ModelBuilder, mseloss, backgroundloss, classloss
+from model_builder import ModelBuilder, mse_loss, background_loss, class_loss
 from path_config import PNG_TRAIN_DATASET, TENSORBOARD_PATH, TaskType, BATCH_SIZE
 from dataset_tool import DatasetTool, TaskType
 
@@ -85,9 +84,9 @@ def train():
                 logits = model(x_batch_train, training=True)  # Logits for this minibatch
 
                 if task_type == TaskType.OBJECT_DETECTION:
-                    mse_loss_value = mseloss(y_batch_train, logits)
-                    background_loss_value = backgroundloss(y_batch_train, logits)
-                    class_loss_value = classloss(y_batch_train, logits)
+                    mse_loss_value = mse_loss(y_batch_train, logits)
+                    background_loss_value = background_loss(y_batch_train, logits)
+                    class_loss_value = class_loss(y_batch_train, logits)
                     total_loss = mse_loss_value + background_loss_value + class_loss_value
                 else:
                     total_loss = model_builder.loss(y_batch_train, logits)
@@ -137,8 +136,6 @@ def train():
         print("\n !!!EPOCH FINISHED!!!\n epoch_time %.4f, data reading time %.4f, callback time %.4f" % (epoch_time,
                                                                                total_reading_time_per_epoch,
                                                                                callback_time))
-
-
 
 
 if __name__ == '__main__':
